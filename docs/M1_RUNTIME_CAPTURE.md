@@ -9,6 +9,7 @@ This document defines the minimum runtime evidence required to close M1 after `O
 The runtime record must contain:
 
 - the IzzOS diagnostic title/target banner;
+- `[IDENTITY] payload-id=M1-DIAG-R3 schema=1 sha256-association=EXTERNAL-MANIFEST`;
 - the read-only/storage-write-disabled banner;
 - GOP availability status;
 - if GOP exists: mode, max mode, resolution, pixels-per-scanline, pixel format, framebuffer base and framebuffer size;
@@ -18,6 +19,18 @@ The runtime record must contain:
 - final `[RESULT] memory-map dump completed` or the exact failure status;
 - any `[INPUT]` status printed before returning to firmware;
 - a note describing how the phone returned to stock boot after the temporary run.
+
+## Payload identity and SHA association
+
+The payload prints a semantic runtime identity rather than embedding its own SHA256. Embedding a full-file SHA into the same file would create a self-referential hash problem and would not improve provenance.
+
+For the current first-device candidate, the required runtime identity is:
+
+```text
+[IDENTITY] payload-id=M1-DIAG-R3 schema=1 sha256-association=EXTERNAL-MANIFEST
+```
+
+The exact executable SHA256 remains recorded in the verified CI artifact metadata / manifest. A runtime capture is accepted only when its payload ID is associated with the exact externally verified EFI SHA256 used for the launch.
 
 ## Hardened runtime behavior
 
@@ -48,14 +61,19 @@ Do not add storage writes to the diagnostic merely to save a log during M1.
 After converting the capture to plain text, run:
 
 ```bash
-bash scripts/analyze-ovaltine-diag.sh ovaltine-diag-output.txt
+bash scripts/analyze-ovaltine-diag.sh ovaltine-diag-output.txt M1-DIAG-R3
 ```
 
-Expected success classification:
+Expected identity and success lines:
 
 ```text
+payload-identity: PRESENT
+payload-id: M1-DIAG-R3
+payload-identity-match: YES
 classification: DIAGNOSTIC_CAPTURE_COMPLETE
 ```
+
+If the expected payload ID is absent or different, the analyzer returns `DIAGNOSTIC_CAPTURE_IDENTITY_MISMATCH` and a non-zero status. Do not use that capture to close M1.
 
 A complete classification alone is not enough if `memory-map-integrity: MISMATCH` is reported. Descriptor-count mismatch must be investigated before using the map as an engineering source.
 
@@ -67,6 +85,7 @@ GOP data is runtime firmware hand-off evidence. It may be used to inform later f
 - OxygenOS build;
 - bootloader state;
 - launch route;
+- payload ID;
 - IzzOS source revision / payload SHA256.
 
 A runtime framebuffer address from one firmware build must not be promoted to a universal hard-coded constant.
@@ -96,10 +115,11 @@ M1 may be marked complete only when all are true:
 
 1. the exact device inspection is recorded;
 2. a temporary non-persistent launch route is validated;
-3. `OvaltineDiag.efi` executes on the phone;
-4. GOP state is captured (available or unavailable is both valid evidence);
-5. the UEFI memory map is captured without integrity mismatch, or any mismatch is understood and resolved;
-6. the device returns to stock boot without partition/slot changes;
-7. the runtime record is linked to the exact payload SHA256.
+3. the expected `M1-DIAG-R3` payload identity is captured on the phone;
+4. `OvaltineDiag.efi` executes on the phone;
+5. GOP state is captured (available or unavailable is both valid evidence);
+6. the UEFI memory map is captured without integrity mismatch, or any mismatch is understood and resolved;
+7. the device returns to stock boot without partition/slot changes;
+8. the runtime record is linked to the exact externally verified payload SHA256.
 
 Only then should the project advance formally to M2 temporary UEFI boot bring-up.
