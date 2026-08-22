@@ -6,12 +6,12 @@ on:
       - izzos-woa-foundation
     paths:
       - 'uefi/**'
-      - 'scripts/build-ovaltine-diag.sh'
+      - 'scripts/**'
       - '.github/workflows/uefi-ovaltine-diag.yml'
   pull_request:
     paths:
       - 'uefi/**'
-      - 'scripts/build-ovaltine-diag.sh'
+      - 'scripts/**'
       - '.github/workflows/uefi-ovaltine-diag.yml'
 
 jobs:
