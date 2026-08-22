@@ -24,6 +24,9 @@ jobs:
       - name: Checkout IzzOS
         uses: actions/checkout@v4
 
+      - name: Validate shell scripts
+        run: bash -n scripts/*.sh
+
       - name: Enforce M1 read-only safety gate
         run: bash scripts/check-m1-safety.sh
 
