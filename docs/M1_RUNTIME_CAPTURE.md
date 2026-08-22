@@ -14,8 +14,24 @@ The runtime record must contain:
 - if GOP exists: mode, max mode, resolution, pixels-per-scanline, pixel format, framebuffer base and framebuffer size;
 - UEFI memory-map descriptor count, descriptor size and descriptor version;
 - every printed memory descriptor line;
+- any `[MEM] map grew during capture; retrying ...` line if firmware changes the map during collection;
 - final `[RESULT] memory-map dump completed` or the exact failure status;
+- any `[INPUT]` status printed before returning to firmware;
 - a note describing how the phone returned to stock boot after the temporary run.
+
+## Hardened runtime behavior
+
+The diagnostic deliberately allows a bounded memory-map retry window. A line such as:
+
+```text
+[MEM] map grew during capture; retrying ...
+```
+
+is informational by itself and does **not** mean the run failed. The capture is acceptable only if a later complete memory map is printed and `[RESULT] memory-map dump completed` appears.
+
+The diagnostic also validates descriptor geometry before walking the map. Invalid descriptor size, map-size overflow, or a final map size that is not divisible by descriptor size is treated as compromised/invalid evidence and must not be used for platform constants.
+
+Console input is optional evidence, not a boot requirement. If firmware does not expose a usable `ConIn`/`WaitForKey` path, the payload reports an `[INPUT]` status and returns safely instead of dereferencing an unavailable console protocol.
 
 ## Preferred capture methods
 
