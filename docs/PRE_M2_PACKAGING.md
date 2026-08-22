@@ -18,8 +18,36 @@ The packaging layer is deliberately route-neutral until exact-device inspection 
 - classic bootloader fastboot versus fastbootd state;
 - exact stock boot/vendor_boot format for that firmware;
 - stock boot-critical image backups or reproducible extraction source;
+- auditable provenance for every stock image used as a packaging template;
 - documented recovery path back to stock boot;
 - explicit evidence that the chosen launch route is temporary and does not require a persistent partition write.
+
+## Stock image provenance gate
+
+Any stock image used to derive or validate an M2 package must have a provenance record containing at minimum:
+
+- device model/product;
+- exact OxygenOS build;
+- image role (`boot`, `vendor_boot`, `dtbo`, `vbmeta`, etc.);
+- exact image filename;
+- image size in bytes;
+- SHA256 of the exact image bytes;
+- source from which the image was obtained;
+- extraction method/tool context.
+
+Run:
+
+```bash
+bash scripts/verify-stock-image-provenance.sh stock-image-provenance.txt
+```
+
+Required result before the image may be trusted as an engineering input:
+
+```text
+classification: PROVENANCE_COMPLETE
+```
+
+`PROVENANCE_COMPLETE` only proves that the image source is auditable. It does **not** validate boot format, recovery readiness, temporary-launch support, or permission to launch.
 
 ## Packaging invariants
 
@@ -28,13 +56,14 @@ Any future M2 package must:
 1. embed or chain-load the already verified `OvaltineDiag.efi` payload;
 2. preserve the payload SHA256 in package metadata;
 3. identify the exact stock firmware/build it was derived from;
-4. never reuse boot-header offsets or addresses copied from an older Snapdragon target;
-5. contain no partition flashing command;
-6. contain no slot-changing command;
-7. contain no bootloader unlock command;
-8. fail closed when the detected device/firmware does not match its manifest;
-9. provide a dry-run/inspection mode before any launch operation;
-10. leave stock boot intact after a reboot.
+4. reference SHA256-proven stock image inputs rather than unnamed files;
+5. never reuse boot-header offsets or addresses copied from an older Snapdragon target;
+6. contain no partition flashing command;
+7. contain no slot-changing command;
+8. contain no bootloader unlock command;
+9. fail closed when the detected device/firmware does not match its manifest;
+10. provide a dry-run/inspection mode before any launch operation;
+11. leave stock boot intact after a reboot.
 
 ## Route-neutral package layout
 
@@ -46,6 +75,9 @@ out/m2-launch/<firmware-id>/
   payload/
     OvaltineDiag.efi
     SHA256SUMS
+  stock-inputs/
+    provenance/
+      <image>.txt
   derived/
     <route-specific temporary image or chain-load files>
   logs/
@@ -66,6 +98,7 @@ out/m2-launch/<firmware-id>/
 - selected launch route
 - persistent writes: `FORBIDDEN`
 - route validation evidence reference
+- stock input SHA256/provenance references
 
 ## Route decision states
 
@@ -85,6 +118,7 @@ Before first launch, IzzOS must be able to answer all of these with evidence:
 
 - How does the phone return to stock boot after a failed diagnostic launch?
 - Which stock images/build are required for recovery?
+- Are the exact recovery images identified by SHA256 and provenance?
 - Does the launch touch slot metadata?
 - Does it write boot, vendor_boot, init_boot, dtbo, vbmeta, abl, xbl, or any other persistent partition?
 - Is emergency recovery for the exact variant understood well enough to stop if the temporary route behaves unexpectedly?
