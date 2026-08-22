@@ -24,6 +24,9 @@ jobs:
       - name: Checkout IzzOS
         uses: actions/checkout@v4
 
+      - name: Enforce M1 read-only safety gate
+        run: bash scripts/check-m1-safety.sh
+
       - name: Install AArch64 EDK2 dependencies
         run: |
           sudo apt-get update
