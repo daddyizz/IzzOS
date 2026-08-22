@@ -8,6 +8,8 @@
 
 #define MEMORY_MAP_MAX_ATTEMPTS 4
 #define KEY_READ_MAX_ATTEMPTS   3
+#define OVALTINE_DIAG_ID         L"M1-DIAG-R3"
+#define OVALTINE_DIAG_SCHEMA     1
 
 STATIC
 CONST CHAR16 *
@@ -282,6 +284,7 @@ UefiMain (
   (VOID)SystemTable;
 
   Print (L"\r\nIzzOS Ovaltine Diagnostic Payload\r\n");
+  Print (L"[IDENTITY] payload-id=%s schema=%u sha256-association=EXTERNAL-MANIFEST\r\n", OVALTINE_DIAG_ID, OVALTINE_DIAG_SCHEMA);
   Print (L"Target: OnePlus 10T 5G / ovaltine / Qualcomm SM8475 (Cape)\r\n");
   Print (L"Mode: READ-ONLY firmware inspection\r\n");
   Print (L"Storage writes: DISABLED by design\r\n\r\n");
