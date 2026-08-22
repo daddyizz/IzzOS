@@ -6,6 +6,9 @@
 
 #include <Protocol/GraphicsOutput.h>
 
+#define MEMORY_MAP_MAX_ATTEMPTS 4
+#define KEY_READ_MAX_ATTEMPTS   3
+
 STATIC
 CONST CHAR16 *
 MemoryTypeName (
@@ -85,6 +88,8 @@ DumpMemoryMap (
   UINT32 DescriptorVersion;
   UINTN Index;
   UINTN Count;
+  UINTN Attempt;
+  UINTN AllocationSize;
 
   Map = NULL;
   MapSize = 0;
@@ -104,24 +109,87 @@ DumpMemoryMap (
     return Status;
   }
 
-  MapSize += 2 * DescriptorSize;
-  Map = AllocatePool (MapSize);
-  if (Map == NULL) {
-    Print (L"[MEM] allocation failed\r\n");
-    return EFI_OUT_OF_RESOURCES;
+  if (DescriptorSize < sizeof (EFI_MEMORY_DESCRIPTOR)) {
+    Print (
+      L"[MEM] invalid descriptor size: %Lu (minimum %Lu)\r\n",
+      (UINT64)DescriptorSize,
+      (UINT64)sizeof (EFI_MEMORY_DESCRIPTOR)
+      );
+    return EFI_COMPROMISED_DATA;
   }
 
-  Status = gBS->GetMemoryMap (
-                  &MapSize,
-                  Map,
-                  &MapKey,
-                  &DescriptorSize,
-                  &DescriptorVersion
-                  );
-  if (EFI_ERROR (Status)) {
-    Print (L"[MEM] GetMemoryMap failed: %r\r\n", Status);
+  for (Attempt = 0; Attempt < MEMORY_MAP_MAX_ATTEMPTS; ++Attempt) {
+    if (MapSize > MAX_UINTN - (2 * DescriptorSize)) {
+      Print (L"[MEM] map size overflow while adding descriptor slack\r\n");
+      Status = EFI_BAD_BUFFER_SIZE;
+      break;
+    }
+
+    AllocationSize = MapSize + (2 * DescriptorSize);
+    Map = AllocatePool (AllocationSize);
+    if (Map == NULL) {
+      Print (L"[MEM] allocation failed: requested=%Lu\r\n", (UINT64)AllocationSize);
+      Status = EFI_OUT_OF_RESOURCES;
+      break;
+    }
+
+    MapSize = AllocationSize;
+    Status = gBS->GetMemoryMap (
+                    &MapSize,
+                    Map,
+                    &MapKey,
+                    &DescriptorSize,
+                    &DescriptorVersion
+                    );
+    if (!EFI_ERROR (Status)) {
+      break;
+    }
+
     FreePool (Map);
+    Map = NULL;
+
+    if (Status != EFI_BUFFER_TOO_SMALL) {
+      Print (L"[MEM] GetMemoryMap failed on attempt %Lu: %r\r\n", (UINT64)(Attempt + 1), Status);
+      break;
+    }
+
+    if (DescriptorSize < sizeof (EFI_MEMORY_DESCRIPTOR)) {
+      Print (L"[MEM] descriptor size became invalid during retry: %Lu\r\n", (UINT64)DescriptorSize);
+      Status = EFI_COMPROMISED_DATA;
+      break;
+    }
+
+    Print (
+      L"[MEM] map grew during capture; retrying (%Lu/%u), required=%Lu\r\n",
+      (UINT64)(Attempt + 1),
+      MEMORY_MAP_MAX_ATTEMPTS,
+      (UINT64)MapSize
+      );
+  }
+
+  if (EFI_ERROR (Status)) {
+    if (Map != NULL) {
+      FreePool (Map);
+    }
+
+    if (Status == EFI_BUFFER_TOO_SMALL) {
+      Print (L"[MEM] memory map kept growing after %u attempts\r\n", MEMORY_MAP_MAX_ATTEMPTS);
+    }
+
     return Status;
+  }
+
+  if (Map == NULL || DescriptorSize == 0 || MapSize == 0 || (MapSize % DescriptorSize) != 0) {
+    Print (
+      L"[MEM] invalid final map geometry: map=%p size=%Lu descriptor-size=%Lu\r\n",
+      Map,
+      (UINT64)MapSize,
+      (UINT64)DescriptorSize
+      );
+    if (Map != NULL) {
+      FreePool (Map);
+    }
+    return EFI_COMPROMISED_DATA;
   }
 
   Count = MapSize / DescriptorSize;
@@ -151,17 +219,45 @@ DumpMemoryMap (
 }
 
 STATIC
-VOID
+EFI_STATUS
 WaitForKey (
   VOID
   )
 {
+  EFI_STATUS Status;
   EFI_INPUT_KEY Key;
   UINTN EventIndex;
+  UINTN Attempt;
+
+  if (gBS == NULL || gST == NULL || gST->ConIn == NULL ||
+      gST->ConIn->WaitForKey == NULL || gST->ConIn->ReadKeyStroke == NULL) {
+    Print (L"\r\n[INPUT] console input protocol unavailable; returning without key wait.\r\n");
+    return EFI_UNSUPPORTED;
+  }
 
   Print (L"\r\nPress any key to return to firmware...\r\n");
-  gBS->WaitForEvent (1, &gST->ConIn->WaitForKey, &EventIndex);
-  gST->ConIn->ReadKeyStroke (gST->ConIn, &Key);
+
+  for (Attempt = 0; Attempt < KEY_READ_MAX_ATTEMPTS; ++Attempt) {
+    EventIndex = 0;
+    Status = gBS->WaitForEvent (1, &gST->ConIn->WaitForKey, &EventIndex);
+    if (EFI_ERROR (Status)) {
+      Print (L"[INPUT] WaitForEvent failed: %r\r\n", Status);
+      return Status;
+    }
+
+    Status = gST->ConIn->ReadKeyStroke (gST->ConIn, &Key);
+    if (!EFI_ERROR (Status)) {
+      return EFI_SUCCESS;
+    }
+
+    if (Status != EFI_NOT_READY) {
+      Print (L"[INPUT] ReadKeyStroke failed: %r\r\n", Status);
+      return Status;
+    }
+  }
+
+  Print (L"[INPUT] key remained unavailable after %u attempts; returning safely.\r\n", KEY_READ_MAX_ATTEMPTS);
+  return EFI_NOT_READY;
 }
 
 EFI_STATUS
@@ -172,6 +268,7 @@ UefiMain (
   )
 {
   EFI_STATUS Status;
+  EFI_STATUS InputStatus;
 
   (VOID)ImageHandle;
   (VOID)SystemTable;
@@ -192,7 +289,10 @@ UefiMain (
   }
 
   Print (L"\r\nNo BlockIo, DiskIo, SimpleFileSystem write, UFS MMIO write, or ExitBootServices call is performed.\r\n");
-  WaitForKey ();
+  InputStatus = WaitForKey ();
+  if (EFI_ERROR (InputStatus) && InputStatus != EFI_UNSUPPORTED && InputStatus != EFI_NOT_READY) {
+    Print (L"[RESULT] console input wait ended with: %r\r\n", InputStatus);
+  }
 
   return EFI_SUCCESS;
 }
