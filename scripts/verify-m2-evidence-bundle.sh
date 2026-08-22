@@ -34,6 +34,7 @@ BUILD_ID="$(inspection_value build-id || true)"
 STAGE_TARGET="$(manifest_value "$STAGING" Target || true)"
 STAGE_FIRMWARE="$(manifest_value "$STAGING" 'Firmware ID' || true)"
 STAGE_ROUTE="$(manifest_value "$STAGING" 'Selected launch route' || true)"
+STAGE_DECISION="$(manifest_value "$STAGING" 'Route decision' || true)"
 STAGE_WRITES="$(manifest_value "$STAGING" 'Persistent writes' || true)"
 STAGE_SLOT_CHANGES="$(manifest_value "$STAGING" 'Slot changes' || true)"
 
@@ -54,9 +55,21 @@ if [[ "$STAGE_TARGET" != *"OnePlus 10T"* || "$STAGE_TARGET" != *"SM8475"* ]]; th
   blocked=1
 fi
 
-if [[ "$STAGE_ROUTE" != "NONE" && "$STAGE_ROUTE" != "TEMPORARY_ROUTE_VALIDATED" ]]; then
-  echo "ERROR: staging route state is not an allowed evidence state: ${STAGE_ROUTE:-UNKNOWN}" >&2
+# Route and decision are separate concepts. Route-neutral staging uses NONE;
+# a concrete route is valid evidence only after TEMPORARY_ROUTE_VALIDATED.
+if [[ -z "$STAGE_ROUTE" ]]; then
+  echo "ERROR: staging launch route is missing" >&2
   blocked=1
+elif [[ "$STAGE_ROUTE" == "NONE" ]]; then
+  if [[ -n "$STAGE_DECISION" && "$STAGE_DECISION" != "INSUFFICIENT_DEVICE_DATA" ]]; then
+    echo "ERROR: route NONE is inconsistent with route decision: $STAGE_DECISION" >&2
+    blocked=1
+  fi
+else
+  if [[ "$STAGE_DECISION" != "TEMPORARY_ROUTE_VALIDATED" ]]; then
+    echo "ERROR: concrete launch route requires Route decision: TEMPORARY_ROUTE_VALIDATED" >&2
+    blocked=1
+  fi
 fi
 
 if [[ "$STAGE_WRITES" != "FORBIDDEN" || "$STAGE_SLOT_CHANGES" != "FORBIDDEN" ]]; then
@@ -86,7 +99,6 @@ for manifest in "${STOCK_MANIFESTS[@]}"; do
       blocked=1
     fi
   fi
-
 done
 
 if [[ -n "$first_stock_build" && "$first_stock_build" != "$BUILD_ID" ]]; then
@@ -108,5 +120,7 @@ echo "classification: M2_EVIDENCE_BUNDLE_CONSISTENT"
 echo "device: ${DEVICE}"
 echo "product: ${PRODUCT:-unknown}"
 echo "build-id: ${BUILD_ID}"
+echo "selected-route: ${STAGE_ROUTE}"
+echo "route-decision: ${STAGE_DECISION:-UNSET_ROUTE_NEUTRAL}"
 echo "stock-image-count: ${#STOCK_MANIFESTS[@]}"
 echo "decision: evidence is internally consistent, but this does not validate or execute a temporary boot route."
