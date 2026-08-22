@@ -17,29 +17,65 @@ Before running the inspection:
 - ensure only one target Android/fastboot device is connected to avoid ambiguous identity;
 - do not run broad `fastboot getvar all`.
 
-## Stage A — Android/ADB read-only capture
+## Preferred one-command collector
 
 From the IzzOS repository:
 
 ```bash
 git switch izzos-woa-foundation
 git pull
-bash scripts/inspect-ovaltine-device.sh | tee ovaltine-inspection-adb.txt
-bash scripts/analyze-ovaltine-inspection.sh ovaltine-inspection-adb.txt
+bash scripts/collect-m1-device-inspection.sh
 ```
 
-Expected outcome at this stage is normally `NEED_EXACT_FASTBOOT_INSPECTION` unless fastboot evidence is already present in the capture.
+Default evidence output:
 
-## Stage B — classic bootloader/fastboot read-only capture
+```text
+out/m1-device-inspection/
+  ovaltine-inspection.txt
+  ovaltine-inspection-analysis.txt
+  INSPECTION_SUMMARY.txt
+  SHA256SUMS
+```
 
-Only after the user intentionally reboots the phone into the normal bootloader/fastboot screen using the phone's normal reboot method or OEM UI flow, run the same inspector again:
+The collector runs only the existing privacy-safe inspector and offline analyzer. It does not reboot the phone or execute any boot/flash/unlock/slot-changing command.
+
+## Stage A — Android/ADB capture
+
+With the phone booted normally into OxygenOS and USB debugging authorized, run the collector once.
+
+The expected classification is normally:
+
+```text
+NEED_EXACT_FASTBOOT_INSPECTION
+```
+
+This is not an error. It means Android-side identity/build evidence was captured but classic bootloader-fastboot evidence is still missing.
+
+Keep this first output directory as evidence. If desired, provide a custom directory:
 
 ```bash
-bash scripts/inspect-ovaltine-device.sh | tee ovaltine-inspection-fastboot.txt
-bash scripts/analyze-ovaltine-inspection.sh ovaltine-inspection-fastboot.txt
+bash scripts/collect-m1-device-inspection.sh out/m1-device-inspection-adb
 ```
 
-The inspector is restricted to safe capability/identity queries. Do not add flash, erase, format, unlock, boot, `set_active`, or broad `getvar all` commands.
+## Stage B — classic bootloader/fastboot capture
+
+Only after intentionally entering the phone's normal bootloader/fastboot screen using the device's normal reboot method or OEM UI flow, run the collector again into a second directory:
+
+```bash
+bash scripts/collect-m1-device-inspection.sh out/m1-device-inspection-fastboot
+```
+
+The collector queries only:
+
+- product;
+- current slot;
+- slot count;
+- unlocked state;
+- secure state;
+- userspace-fastboot state;
+- bootloader version.
+
+It intentionally does not use broad `fastboot getvar all`.
 
 ## Evidence required before route work
 
@@ -54,9 +90,11 @@ The combined captures must establish, or explicitly fail to establish:
 - whether the observed fastboot environment is classic fastboot or userspace fastbootd;
 - whether more exact-device inspection is still required.
 
+Every collector bundle includes SHA256 checksums so evidence can be preserved unchanged for later route/recovery decisions.
+
 ## Accepted analyzer classifications
 
-`CLASSIC_FASTBOOT_CANDIDATE_UNVERIFIED` means only that the environment may be suitable for further temporary-route research. It does **not** mean `fastboot boot` is supported or safe for this exact firmware.
+`CLASSIC_FASTBOOT_CANDIDATE_UNVERIFIED` means only that the environment may be suitable for further temporary-route research. It does **not** mean temporary boot is supported or safe for this exact firmware.
 
 The following remain hard stops for route-specific packaging:
 
@@ -70,6 +108,17 @@ The following remain hard stops for route-specific packaging:
 ## Privacy
 
 Before sharing or committing inspection output, keep model/product/build/slot/boot-mode fields but redact any raw serial, IMEI/MEID, MAC address, account name, or personally identifying local path. The provided inspector is designed to avoid printing raw serials.
+
+## What to send back for analysis
+
+When the physical inspection gate is reached, the useful handoff is the two evidence directories (or at minimum these files from each capture):
+
+- `ovaltine-inspection.txt`
+- `ovaltine-inspection-analysis.txt`
+- `INSPECTION_SUMMARY.txt`
+- `SHA256SUMS`
+
+Do not manually edit the evidence files after capture; if redaction is needed for public sharing, preserve the original privately and make a separate redacted copy.
 
 ## What happens after a valid capture
 
