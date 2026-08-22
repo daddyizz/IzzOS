@@ -23,7 +23,11 @@ cp -a "${ROOT_DIR}/uefi/Platform/IzzOS" "${WORK_DIR}/Platform/IzzOS"
 pushd "${WORK_DIR}" >/dev/null
 make -C BaseTools
 export PYTHON_COMMAND="${PYTHON_COMMAND:-python3}"
+# edksetup.sh references variables before defining them, so temporarily
+# disable nounset while sourcing upstream EDK2's environment setup.
+set +u
 source edksetup.sh
+set -u
 export GCC_AARCH64_PREFIX="${GCC_AARCH64_PREFIX:-aarch64-linux-gnu-}"
 build -a AARCH64 -t GCC -b DEBUG -p Platform/IzzOS/OvaltinePkg/OvaltineDiag.dsc
 popd >/dev/null
