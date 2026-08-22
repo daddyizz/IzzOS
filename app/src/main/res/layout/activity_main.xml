@@ -1,0 +1,81 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/desktop_bg">
+
+    <TextView
+        android:id="@+id/desktopTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_margin="24dp"
+        android:text="IzzOS Desktop"
+        android:textColor="@color/text_primary"
+        android:textSize="22sp"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:id="@+id/startMenu"
+        android:layout_width="300dp"
+        android:layout_height="420dp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="12dp"
+        android:layout_marginBottom="68dp"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="@color/panel_bg"
+        android:visibility="gone">
+
+        <EditText
+            android:id="@+id/searchApps"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:hint="Search apps"
+            android:textColor="@color/text_primary"
+            android:textColorHint="#AAB0BA" />
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+            <LinearLayout
+                android:id="@+id/appList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </ScrollView>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/taskbar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_gravity="bottom"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="10dp"
+        android:background="@color/panel_bg">
+
+        <Button
+            android:id="@+id/startButton"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:text="⊞  Start" />
+
+        <TextView
+            android:id="@+id/taskLabel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:paddingStart="16dp"
+            android:text="IzzOS v0.1"
+            android:textColor="@color/text_primary" />
+
+        <TextView
+            android:id="@+id/clock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_primary" />
+    </LinearLayout>
+</FrameLayout>
