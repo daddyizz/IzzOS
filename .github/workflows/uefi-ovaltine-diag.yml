@@ -32,6 +32,9 @@ jobs:
       - name: Test device capability analyzer
         run: bash scripts/test-analyze-ovaltine-inspection.sh
 
+      - name: Test one-command read-only device inspection collector
+        run: bash scripts/test-collect-m1-device-inspection.sh
+
       - name: Test diagnostic output analyzer
         run: bash scripts/test-analyze-ovaltine-diag.sh
 
