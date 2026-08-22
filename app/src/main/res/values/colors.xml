@@ -1,0 +1,6 @@
+<resources>
+    <color name="desktop_bg">#171A21</color>
+    <color name="panel_bg">#CC20242C</color>
+    <color name="accent">#63E6BE</color>
+    <color name="text_primary">#FFFFFF</color>
+</resources>
