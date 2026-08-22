@@ -90,6 +90,7 @@ DumpMemoryMap (
   UINTN Count;
   UINTN Attempt;
   UINTN AllocationSize;
+  UINTN SlackSize;
 
   Map = NULL;
   MapSize = 0;
@@ -119,13 +120,20 @@ DumpMemoryMap (
   }
 
   for (Attempt = 0; Attempt < MEMORY_MAP_MAX_ATTEMPTS; ++Attempt) {
-    if (MapSize > MAX_UINTN - (2 * DescriptorSize)) {
+    if (DescriptorSize > (MAX_UINTN / 2)) {
+      Print (L"[MEM] descriptor slack multiplication would overflow\r\n");
+      Status = EFI_BAD_BUFFER_SIZE;
+      break;
+    }
+
+    SlackSize = 2 * DescriptorSize;
+    if (MapSize > MAX_UINTN - SlackSize) {
       Print (L"[MEM] map size overflow while adding descriptor slack\r\n");
       Status = EFI_BAD_BUFFER_SIZE;
       break;
     }
 
-    AllocationSize = MapSize + (2 * DescriptorSize);
+    AllocationSize = MapSize + SlackSize;
     Map = AllocatePool (AllocationSize);
     if (Map == NULL) {
       Print (L"[MEM] allocation failed: requested=%Lu\r\n", (UINT64)AllocationSize);
