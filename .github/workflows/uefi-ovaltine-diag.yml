@@ -1,0 +1,47 @@
+name: UEFI Ovaltine Diagnostic
+
+on:
+  push:
+    branches:
+      - izzos-woa-foundation
+    paths:
+      - 'uefi/**'
+      - 'scripts/build-ovaltine-diag.sh'
+      - '.github/workflows/uefi-ovaltine-diag.yml'
+  pull_request:
+    paths:
+      - 'uefi/**'
+      - 'scripts/build-ovaltine-diag.sh'
+      - '.github/workflows/uefi-ovaltine-diag.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout IzzOS
+        uses: actions/checkout@v4
+
+      - name: Install AArch64 EDK2 dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            acpica-tools \
+            gcc-aarch64-linux-gnu \
+            git \
+            make \
+            nasm \
+            python3 \
+            uuid-dev
+
+      - name: Build OvaltineDiag
+        run: bash scripts/build-ovaltine-diag.sh
+
+      - name: Upload diagnostic EFI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OvaltineDiag-AARCH64
+          path: out/ovaltine-diag/
+          if-no-files-found: error
