@@ -30,6 +30,9 @@ jobs:
       - name: Test device capability analyzer
         run: bash scripts/test-analyze-ovaltine-inspection.sh
 
+      - name: Test diagnostic output analyzer
+        run: bash scripts/test-analyze-ovaltine-diag.sh
+
       - name: Enforce M1 read-only safety gate
         run: bash scripts/check-m1-safety.sh
 
