@@ -33,6 +33,9 @@ jobs:
       - name: Test diagnostic output analyzer
         run: bash scripts/test-analyze-ovaltine-diag.sh
 
+      - name: Test stock boot metadata analyzer
+        run: bash scripts/test-analyze-stock-boot-metadata.sh
+
       - name: Enforce M1 read-only safety gate
         run: bash scripts/check-m1-safety.sh
 
