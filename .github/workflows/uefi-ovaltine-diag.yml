@@ -54,6 +54,9 @@ jobs:
       - name: Test M2 route authorization gate
         run: bash scripts/test-verify-m2-route-authorization.sh
 
+      - name: Test M2 evidence tamper detection
+        run: bash scripts/test-evidence-bundle-index.sh
+
       - name: Enforce M1 read-only safety gate
         run: bash scripts/check-m1-safety.sh
 
