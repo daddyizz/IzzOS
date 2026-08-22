@@ -16,9 +16,11 @@ git -C "${WORK_DIR}" fetch origin "${EDK2_REV}" --depth=1
 git -C "${WORK_DIR}" checkout --detach "${EDK2_REV}"
 
 # OvaltineDiag uses only MdePkg plus BaseTools. Avoid cloning every EDK2
-# third-party submodule; BaseTools needs its Brotli source to build cleanly.
+# third-party submodule. BaseTools requires Brotli, while MdePkg.dec exposes
+# the MipiSysT include directory unconditionally, so both must be present.
 git -C "${WORK_DIR}" submodule update --init --depth=1 \
-  BaseTools/Source/C/BrotliCompress/brotli
+  BaseTools/Source/C/BrotliCompress/brotli \
+  MdePkg/Library/MipiSysTLib/mipisyst
 
 rm -rf "${WORK_DIR}/Platform/IzzOS"
 mkdir -p "${WORK_DIR}/Platform"
