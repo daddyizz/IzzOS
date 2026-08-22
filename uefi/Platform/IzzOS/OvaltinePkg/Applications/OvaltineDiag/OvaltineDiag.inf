@@ -13,12 +13,10 @@
   MdePkg/MdePkg.dec
 
 [LibraryClasses]
-  BaseMemoryLib
   MemoryAllocationLib
   UefiApplicationEntryPoint
   UefiBootServicesTableLib
   UefiLib
-  UefiRuntimeServicesTableLib
 
 [Protocols]
   gEfiGraphicsOutputProtocolGuid
