@@ -45,6 +45,9 @@ jobs:
       - name: Test stock image set consistency
         run: bash scripts/test-stock-image-set.sh
 
+      - name: Test M2 evidence bundle consistency
+        run: bash scripts/test-verify-m2-evidence-bundle.sh
+
       - name: Enforce M1 read-only safety gate
         run: bash scripts/check-m1-safety.sh
 
