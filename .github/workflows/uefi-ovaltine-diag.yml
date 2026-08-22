@@ -36,6 +36,9 @@ jobs:
       - name: Test stock boot metadata analyzer
         run: bash scripts/test-analyze-stock-boot-metadata.sh
 
+      - name: Test stock image provenance gate
+        run: bash scripts/test-verify-stock-image-provenance.sh
+
       - name: Enforce M1 read-only safety gate
         run: bash scripts/check-m1-safety.sh
 
