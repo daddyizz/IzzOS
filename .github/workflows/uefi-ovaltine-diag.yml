@@ -48,6 +48,9 @@ jobs:
       - name: Test M2 evidence bundle consistency
         run: bash scripts/test-verify-m2-evidence-bundle.sh
 
+      - name: Test M2 route authorization gate
+        run: bash scripts/test-verify-m2-route-authorization.sh
+
       - name: Enforce M1 read-only safety gate
         run: bash scripts/check-m1-safety.sh
 
@@ -83,6 +86,10 @@ jobs:
           grep -q '^Persistent writes: FORBIDDEN$' "$MANIFEST"
           grep -q '^Slot changes: FORBIDDEN$' "$MANIFEST"
           test -z "$(find "$DERIVED" -mindepth 1 -print -quit)"
+          if bash scripts/verify-m2-route-authorization.sh "$MANIFEST" >/dev/null 2>&1; then
+            echo 'ERROR: route-neutral manifest must not pass route authorization' >&2
+            exit 1
+          fi
 
       - name: Upload diagnostic EFI artifact
         uses: actions/upload-artifact@v4
