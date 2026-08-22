@@ -1,10 +1,8 @@
 #include <Uefi.h>
 
-#include <Library/BaseMemoryLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
-#include <Library/UefiRuntimeServicesTableLib.h>
 
 #include <Protocol/GraphicsOutput.h>
 
@@ -64,9 +62,9 @@ DumpGraphicsOutputProtocol (
     Gop->Mode->Info->PixelFormat
     );
   Print (
-    L"[GOP] framebuffer-base=0x%lx framebuffer-size=0x%lx\r\n",
-    Gop->Mode->FrameBufferBase,
-    Gop->Mode->FrameBufferSize
+    L"[GOP] framebuffer-base=0x%Lx framebuffer-size=0x%Lx\r\n",
+    (UINT64)Gop->Mode->FrameBufferBase,
+    (UINT64)Gop->Mode->FrameBufferSize
     );
 
   Print (L"[GOP] NOTE: values above are runtime firmware hand-off data, not hard-coded constants.\r\n");
@@ -128,21 +126,21 @@ DumpMemoryMap (
 
   Count = MapSize / DescriptorSize;
   Print (
-    L"[MEM] descriptors=%u descriptor-size=%u version=%u\r\n",
-    Count,
-    DescriptorSize,
+    L"[MEM] descriptors=%Lu descriptor-size=%Lu version=%u\r\n",
+    (UINT64)Count,
+    (UINT64)DescriptorSize,
     DescriptorVersion
     );
 
   Entry = Map;
   for (Index = 0; Index < Count; ++Index) {
     Print (
-      L"[MEM] %03u %-18s base=0x%016lx pages=0x%lx attr=0x%016lx\r\n",
-      Index,
+      L"[MEM] %03Lu %-18s base=0x%016Lx pages=0x%Lx attr=0x%016Lx\r\n",
+      (UINT64)Index,
       MemoryTypeName (Entry->Type),
-      Entry->PhysicalStart,
-      Entry->NumberOfPages,
-      Entry->Attribute
+      (UINT64)Entry->PhysicalStart,
+      (UINT64)Entry->NumberOfPages,
+      (UINT64)Entry->Attribute
       );
 
     Entry = (EFI_MEMORY_DESCRIPTOR *)((UINT8 *)Entry + DescriptorSize);
