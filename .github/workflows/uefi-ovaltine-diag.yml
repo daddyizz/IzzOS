@@ -7,11 +7,13 @@ on:
     paths:
       - 'uefi/**'
       - 'scripts/**'
+      - 'docs/M1_CURRENT_PAYLOAD.txt'
       - '.github/workflows/uefi-ovaltine-diag.yml'
   pull_request:
     paths:
       - 'uefi/**'
       - 'scripts/**'
+      - 'docs/M1_CURRENT_PAYLOAD.txt'
       - '.github/workflows/uefi-ovaltine-diag.yml'
 
 jobs:
@@ -32,6 +34,9 @@ jobs:
 
       - name: Test diagnostic output analyzer
         run: bash scripts/test-analyze-ovaltine-diag.sh
+
+      - name: Test runtime payload identity verifier
+        run: bash scripts/test-runtime-payload-identity.sh
 
       - name: Test stock boot metadata analyzer
         run: bash scripts/test-analyze-stock-boot-metadata.sh
@@ -83,6 +88,16 @@ jobs:
 
       - name: Verify OvaltineDiag artifact
         run: bash scripts/verify-ovaltine-diag.sh
+
+      - name: Verify current M1 payload identity lock
+        run: |
+          cat > .work/current-payload-runtime.txt <<'EOF'
+          [IDENTITY] payload-id=M1-DIAG-R3 schema=1 hash-source=external-manifest
+          EOF
+          bash scripts/verify-runtime-payload-identity.sh \
+            .work/current-payload-runtime.txt \
+            docs/M1_CURRENT_PAYLOAD.txt \
+            out/ovaltine-diag/OvaltineDiag.efi
 
       - name: Verify route-neutral M2 staging
         run: |
