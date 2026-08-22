@@ -67,7 +67,8 @@ if [[ "$ROUTE_DECISION" != "TEMPORARY_ROUTE_VALIDATED" ]]; then
   exit 1
 fi
 
-SAFE_ID="$(printf '%s' "$FIRMWARE_ID" | tr -cs 'A-Za-z0-9._-()' '_')"
+# Keep '-' last in the tr set so GNU/BSD tr cannot interpret it as a range.
+SAFE_ID="$(printf '%s' "$FIRMWARE_ID" | tr -cs 'A-Za-z0-9._()-' '_')"
 PACKAGE_DIR="$OUTPUT_ROOT/${SAFE_ID}/${PAYLOAD_ID}"
 rm -rf "$PACKAGE_DIR"
 mkdir -p "$PACKAGE_DIR/payload" "$PACKAGE_DIR/evidence/stock" "$PACKAGE_DIR/notes"
