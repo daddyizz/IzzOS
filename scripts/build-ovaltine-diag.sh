@@ -38,9 +38,20 @@ if [[ -z "${EFI_PATH}" ]]; then
   exit 1
 fi
 
-cp "${EFI_PATH}" "${OUT_DIR}/OvaltineDiag.efi"
-printf 'IzzOS revision: %s\nEDK2 revision: %s\nTarget: OnePlus 10T 5G / ovaltine / SM8475\n' \
-  "$(git -C "${ROOT_DIR}" rev-parse HEAD 2>/dev/null || echo unknown)" \
-  "${EDK2_REV}" > "${OUT_DIR}/BUILD_INFO.txt"
+EFI_OUT="${OUT_DIR}/OvaltineDiag.efi"
+cp "${EFI_PATH}" "${EFI_OUT}"
 
-echo "Built: ${OUT_DIR}/OvaltineDiag.efi"
+IZZOS_REV="$(git -C "${ROOT_DIR}" rev-parse HEAD 2>/dev/null || echo unknown)"
+EFI_SIZE="$(stat -c '%s' "${EFI_OUT}")"
+EFI_SHA256="$(sha256sum "${EFI_OUT}" | awk '{print $1}')"
+
+printf 'IzzOS revision: %s\nEDK2 revision: %s\nTarget: OnePlus 10T 5G / ovaltine / SM8475\nEFI file: OvaltineDiag.efi\nEFI size: %s bytes\nEFI SHA256: %s\n' \
+  "${IZZOS_REV}" \
+  "${EDK2_REV}" \
+  "${EFI_SIZE}" \
+  "${EFI_SHA256}" > "${OUT_DIR}/BUILD_INFO.txt"
+
+printf '%s  %s\n' "${EFI_SHA256}" "OvaltineDiag.efi" > "${OUT_DIR}/SHA256SUMS"
+
+echo "Built: ${EFI_OUT}"
+echo "SHA256: ${EFI_SHA256}"
