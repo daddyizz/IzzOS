@@ -41,6 +41,9 @@ jobs:
       - name: Test exact-build stock image request planner
         run: bash scripts/test-plan-stock-image-request.sh
 
+      - name: Test stock acquisition handoff generator
+        run: bash scripts/test-generate-stock-acquisition-handoff.sh
+
       - name: Test diagnostic output analyzer
         run: bash scripts/test-analyze-ovaltine-diag.sh
 
