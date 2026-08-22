@@ -38,6 +38,9 @@ jobs:
       - name: Test merged exact-device evidence
         run: bash scripts/test-merge-m1-device-inspections.sh
 
+      - name: Test exact-build stock image request planner
+        run: bash scripts/test-plan-stock-image-request.sh
+
       - name: Test diagnostic output analyzer
         run: bash scripts/test-analyze-ovaltine-diag.sh
 
