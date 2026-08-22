@@ -175,8 +175,8 @@ UefiMain (
 {
   EFI_STATUS Status;
 
-  UNREFERENCED_PARAMETER (ImageHandle);
-  UNREFERENCED_PARAMETER (SystemTable);
+  (VOID)ImageHandle;
+  (VOID)SystemTable;
 
   Print (L"\r\nIzzOS Ovaltine Diagnostic Payload\r\n");
   Print (L"Target: OnePlus 10T 5G / ovaltine / Qualcomm SM8475 (Cape)\r\n");
