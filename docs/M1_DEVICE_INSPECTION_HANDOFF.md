@@ -17,33 +17,17 @@ Before running the inspection:
 - ensure only one target Android/fastboot device is connected to avoid ambiguous identity;
 - do not run broad `fastboot getvar all`.
 
-## Preferred one-command collector
+## Stage A — Android/ADB capture
 
 From the IzzOS repository:
 
 ```bash
 git switch izzos-woa-foundation
 git pull
-bash scripts/collect-m1-device-inspection.sh
+bash scripts/collect-m1-device-inspection.sh out/m1-device-inspection-adb
 ```
 
-Default evidence output:
-
-```text
-out/m1-device-inspection/
-  ovaltine-inspection.txt
-  ovaltine-inspection-analysis.txt
-  INSPECTION_SUMMARY.txt
-  SHA256SUMS
-```
-
-The collector runs only the existing privacy-safe inspector and offline analyzer. It does not reboot the phone or execute any boot/flash/unlock/slot-changing command.
-
-## Stage A — Android/ADB capture
-
-With the phone booted normally into OxygenOS and USB debugging authorized, run the collector once.
-
-The expected classification is normally:
+With the phone booted normally into OxygenOS and USB debugging authorized, the expected classification is normally:
 
 ```text
 NEED_EXACT_FASTBOOT_INSPECTION
@@ -51,31 +35,44 @@ NEED_EXACT_FASTBOOT_INSPECTION
 
 This is not an error. It means Android-side identity/build evidence was captured but classic bootloader-fastboot evidence is still missing.
 
-Keep this first output directory as evidence. If desired, provide a custom directory:
-
-```bash
-bash scripts/collect-m1-device-inspection.sh out/m1-device-inspection-adb
-```
-
 ## Stage B — classic bootloader/fastboot capture
 
-Only after intentionally entering the phone's normal bootloader/fastboot screen using the device's normal reboot method or OEM UI flow, run the collector again into a second directory:
+Only after intentionally entering the phone's normal bootloader/fastboot screen using the device's normal reboot method or OEM UI flow, run:
 
 ```bash
 bash scripts/collect-m1-device-inspection.sh out/m1-device-inspection-fastboot
 ```
 
-The collector queries only:
+The collector queries only product, current slot, slot count, unlocked state, secure state, userspace-fastboot state and bootloader version. It intentionally does not use broad `fastboot getvar all`.
 
-- product;
-- current slot;
-- slot count;
-- unlocked state;
-- secure state;
-- userspace-fastboot state;
-- bootloader version.
+## Stage C — merge both captures into canonical evidence
 
-It intentionally does not use broad `fastboot getvar all`.
+After both capture directories exist, run:
+
+```bash
+bash scripts/merge-m1-device-inspections.sh \
+  out/m1-device-inspection-adb \
+  out/m1-device-inspection-fastboot \
+  out/m1-exact-device-evidence
+```
+
+Expected successful output file:
+
+```text
+out/m1-exact-device-evidence/
+  M1_EXACT_DEVICE_EVIDENCE.txt
+  SHA256SUMS
+```
+
+The merger checks the fields that can safely be compared across the two phases. It requires both captures to positively match `ovaltine`, requires an exact Android-side build ID, blocks contradictory build IDs when fastboot exposes one, and blocks contradictory slot observations after normalizing `_a`/`a` and `_b`/`b` forms.
+
+Expected successful classification:
+
+```text
+Classification: M1_EXACT_DEVICE_EVIDENCE_CONSISTENT
+```
+
+This classification means the supplied capture pair is internally consistent on the target/build/slot fields available to us. It does **not** prove physical identity by a hidden serial number and it does not authorize launch or packaging.
 
 ## Evidence required before route work
 
@@ -90,7 +87,7 @@ The combined captures must establish, or explicitly fail to establish:
 - whether the observed fastboot environment is classic fastboot or userspace fastbootd;
 - whether more exact-device inspection is still required.
 
-Every collector bundle includes SHA256 checksums so evidence can be preserved unchanged for later route/recovery decisions.
+Every collector bundle and the merged canonical evidence include SHA256 checksums so evidence can be preserved unchanged for later route/recovery decisions.
 
 ## Accepted analyzer classifications
 
@@ -104,6 +101,7 @@ The following remain hard stops for route-specific packaging:
 - `BOOTLOADER_STATE_UNKNOWN_BLOCKED`
 - `NEED_EXACT_FASTBOOT_INSPECTION`
 - `INSUFFICIENT_DATA`
+- `M1_EXACT_DEVICE_EVIDENCE_BLOCKED`
 
 ## Privacy
 
@@ -111,12 +109,12 @@ Before sharing or committing inspection output, keep model/product/build/slot/bo
 
 ## What to send back for analysis
 
-When the physical inspection gate is reached, the useful handoff is the two evidence directories (or at minimum these files from each capture):
+When the physical inspection gate is reached, the preferred handoff is:
 
-- `ovaltine-inspection.txt`
-- `ovaltine-inspection-analysis.txt`
-- `INSPECTION_SUMMARY.txt`
-- `SHA256SUMS`
+- `out/m1-device-inspection-adb/`
+- `out/m1-device-inspection-fastboot/`
+- `out/m1-exact-device-evidence/M1_EXACT_DEVICE_EVIDENCE.txt`
+- `out/m1-exact-device-evidence/SHA256SUMS`
 
 Do not manually edit the evidence files after capture; if redaction is needed for public sharing, preserve the original privately and make a separate redacted copy.
 
