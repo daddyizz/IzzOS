@@ -68,6 +68,9 @@ jobs:
       - name: Test M2 readiness report
         run: bash scripts/test-report-m2-readiness.sh
 
+      - name: Test gated M1 device-test package assembly
+        run: bash scripts/test-prepare-m1-device-test-package.sh
+
       - name: Enforce M1 read-only safety gate
         run: bash scripts/check-m1-safety.sh
 
