@@ -25,5 +25,11 @@
   UefiLib|MdePkg/Library/UefiLib/UefiLib.inf
   UefiRuntimeServicesTableLib|MdePkg/Library/UefiRuntimeServicesTableLib/UefiRuntimeServicesTableLib.inf
 
+[LibraryClasses.AARCH64]
+  # GCC may emit freestanding compiler intrinsics such as memcpy/memset while
+  # optimizing library code. EDK2's official AARCH64 integration supplies
+  # those symbols through CompilerIntrinsicsLib as a NULL library instance.
+  NULL|MdePkg/Library/CompilerIntrinsicsLib/CompilerIntrinsicsLib.inf
+
 [Components]
   Platform/IzzOS/OvaltinePkg/Applications/OvaltineDiag/OvaltineDiag.inf
