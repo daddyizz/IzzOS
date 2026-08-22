@@ -64,7 +64,7 @@ Typical EDK2 workspace invocation once this directory is placed under an EDK2 so
 build -a AARCH64 -t GCC5 -b DEBUG -p Platform/IzzOS/OvaltinePkg/OvaltineDiag.dsc
 ```
 
-Toolchain tag and compiler setup may differ by host environment. A successful host build only validates the application source; it does not prove that the OnePlus 10T boot chain can launch it.
+Toolchain tag and compiler setup may differ by host environment. This repository does not yet contain a vendored EDK2 workspace or CI job, so the current commit establishes source/build scaffolding rather than claiming a verified binary build. A future host-side build must complete before any attempt to launch the payload on the phone.
 
 ## Planned tree
 
