@@ -4,7 +4,7 @@ Status: **verified host build complete**
 
 This document records the first reproducible, CI-verified AARCH64 EFI application produced for the IzzOS M1 non-destructive diagnostic milestone.
 
-## Source provenance
+## First verified build
 
 - IzzOS branch: `izzos-woa-foundation`
 - Source head: `99847bd3d87c1405facc0ccab917c8b8d87366fe`
@@ -25,6 +25,22 @@ GitHub Actions checks out the PR test merge revision for the pull-request run, w
 - File classification: `PE32+ executable for EFI (application), ARM64, 3 sections`
 
 The SHA256 stored in `BUILD_INFO.txt`, the generated `SHA256SUMS`, and an independent checksum of the downloaded CI artifact all matched exactly.
+
+## Reproducibility confirmation
+
+The build script was subsequently optimized to initialize only the third-party submodules required by this minimal target: BaseTools Brotli and MdePkg MipiSysT.
+
+The optimized pipeline passed all gates again:
+
+- source head: `5567fb2ed0011b3c781bb153b843bc282d0e8f32`
+- GitHub Actions run: `32595051840` (run #36)
+- artifact ID: `9481336770`
+- artifact archive digest: `sha256:c77b1632d17a1fd79f00a7ba89e74f6cc1aefa891ecc9c00f857b6c35d43e292`
+- EFI size: `20480` bytes
+- EFI SHA256: `894e008d99464b6c3f88e2ee6debe6edce75dea49fea62a10645f3bf466b2363`
+- file classification: `PE32+ executable for EFI (application), ARM64, 3 sections`
+
+The `.efi` hash is byte-for-byte identical to the first verified build. The ZIP artifact digest differs as expected because `BUILD_INFO.txt` records a different CI checkout revision, but the executable itself is reproducible.
 
 ## CI gates passed
 
