@@ -109,8 +109,11 @@ EOF
   find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
 )
 
-if grep -RIEq --exclude='SHA256SUMS' -- '(fastboot[[:space:]]+(flash|erase|format|flashing|oem|set_active)|adb[[:space:]]+reboot|flashall|set_active)' "$PACKAGE_DIR"; then
-  echo "ERROR: forbidden device command text found in assembled package" >&2
+# Block executable-looking device commands, while allowing documentation that
+# merely names forbidden commands in prose. A command must begin a line (aside
+# from optional whitespace) to trigger this gate.
+if grep -RIEq --exclude='SHA256SUMS' -- '^[[:space:]]*(fastboot[[:space:]]+(flash|erase|format|flashing|oem|set_active|boot)|adb[[:space:]]+reboot|flashall)([[:space:]]|$)' "$PACKAGE_DIR"; then
+  echo "ERROR: forbidden device command line found in assembled package" >&2
   rm -rf "$PACKAGE_DIR"
   exit 1
 fi
