@@ -22,6 +22,7 @@ cp -a "${ROOT_DIR}/uefi/Platform/IzzOS" "${WORK_DIR}/Platform/IzzOS"
 
 pushd "${WORK_DIR}" >/dev/null
 make -C BaseTools
+export PYTHON_COMMAND="${PYTHON_COMMAND:-python3}"
 source edksetup.sh
 export GCC_AARCH64_PREFIX="${GCC_AARCH64_PREFIX:-aarch64-linux-gnu-}"
 build -a AARCH64 -t GCC -b DEBUG -p Platform/IzzOS/OvaltinePkg/OvaltineDiag.dsc
