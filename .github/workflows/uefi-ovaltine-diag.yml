@@ -42,6 +42,9 @@ jobs:
       - name: Test stock provenance generator round trip
         run: bash scripts/test-stock-image-provenance-roundtrip.sh
 
+      - name: Test stock image set consistency
+        run: bash scripts/test-stock-image-set.sh
+
       - name: Enforce M1 read-only safety gate
         run: bash scripts/check-m1-safety.sh
 
