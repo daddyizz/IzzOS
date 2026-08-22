@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -ne 1 ]]; then
-  echo "Usage: $0 <ovaltine-diag-output.txt>" >&2
+if [[ $# -lt 1 || $# -gt 2 ]]; then
+  echo "Usage: $0 <ovaltine-diag-output.txt> [expected-payload-id]" >&2
   exit 2
 fi
 
 INPUT="$1"
+EXPECTED_PAYLOAD_ID="${2:-}"
 if [[ ! -f "${INPUT}" ]]; then
   echo "ERROR: file not found: ${INPUT}" >&2
   exit 2
@@ -17,6 +18,7 @@ line_value() {
   grep -m1 -E "${pattern}" "${INPUT}" || true
 }
 
+IDENTITY_LINE="$(line_value '^\[IDENTITY\] payload-id=')"
 GOP_RES_LINE="$(line_value '^\[GOP\] resolution=')"
 GOP_FB_LINE="$(line_value '^\[GOP\] framebuffer-base=')"
 MEM_HDR_LINE="$(line_value '^\[MEM\] descriptors=')"
@@ -24,6 +26,30 @@ RESULT_LINE="$(line_value '^\[RESULT\] ' )"
 
 printf 'IzzOS Ovaltine diagnostic output analysis\n'
 printf '=========================================\n'
+
+if [[ -n "${IDENTITY_LINE}" ]]; then
+  PAYLOAD_ID="$(printf '%s\n' "${IDENTITY_LINE}" | sed -n 's/.*payload-id=\([^ ]*\).*/\1/p')"
+  IDENTITY_SCHEMA="$(printf '%s\n' "${IDENTITY_LINE}" | sed -n 's/.*schema=\([0-9]*\).*/\1/p')"
+  SHA_ASSOC="$(printf '%s\n' "${IDENTITY_LINE}" | sed -n 's/.*sha256-association=\([^ ]*\).*/\1/p')"
+  echo "payload-identity: PRESENT"
+  echo "payload-id: ${PAYLOAD_ID:-unknown}"
+  echo "identity-schema: ${IDENTITY_SCHEMA:-unknown}"
+  echo "sha256-association: ${SHA_ASSOC:-unknown}"
+  if [[ -n "${EXPECTED_PAYLOAD_ID}" ]]; then
+    if [[ "${PAYLOAD_ID}" == "${EXPECTED_PAYLOAD_ID}" ]]; then
+      echo "payload-identity-match: YES"
+    else
+      echo "payload-identity-match: NO"
+    fi
+  fi
+else
+  echo "payload-identity: MISSING"
+  if [[ -n "${EXPECTED_PAYLOAD_ID}" ]]; then
+    echo "payload-identity-match: NO"
+  fi
+fi
+
+echo
 
 if [[ -n "${GOP_RES_LINE}" && -n "${GOP_FB_LINE}" ]]; then
   RESOLUTION="$(printf '%s\n' "${GOP_RES_LINE}" | sed -n 's/.*resolution=\([0-9]*x[0-9]*\).*/\1/p')"
@@ -94,6 +120,10 @@ fi
 
 echo
 if grep -q '^\[RESULT\] memory-map dump completed' "${INPUT}"; then
+  if [[ -n "${EXPECTED_PAYLOAD_ID}" && "${PAYLOAD_ID:-}" != "${EXPECTED_PAYLOAD_ID}" ]]; then
+    echo "classification: DIAGNOSTIC_CAPTURE_IDENTITY_MISMATCH"
+    exit 1
+  fi
   echo "classification: DIAGNOSTIC_CAPTURE_COMPLETE"
 else
   echo "classification: DIAGNOSTIC_CAPTURE_INCOMPLETE"
