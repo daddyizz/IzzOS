@@ -35,6 +35,9 @@ jobs:
       - name: Test one-command read-only device inspection collector
         run: bash scripts/test-collect-m1-device-inspection.sh
 
+      - name: Test merged exact-device evidence
+        run: bash scripts/test-merge-m1-device-inspections.sh
+
       - name: Test diagnostic output analyzer
         run: bash scripts/test-analyze-ovaltine-diag.sh
 
