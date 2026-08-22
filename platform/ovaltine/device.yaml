@@ -1,0 +1,56 @@
+device:
+  marketing_name: OnePlus 10T 5G
+  codename: ovaltine
+  soc:
+    vendor: Qualcomm
+    model: Snapdragon 8+ Gen 1
+    platform: sm8475
+    architecture: arm64
+  gpu: Adreno 730
+  storage: UFS 3.1
+  target_os: Windows ARM64
+
+sources:
+  oneplus_kernel:
+    repo: https://github.com/OnePlusOSS/android_kernel_oneplus_sm8475
+    branch: oneplus/sm8475_s_12.1_oneplus_10t_5g
+  oneplus_modules_devicetree:
+    repo: https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8475
+    branch: oneplus/sm8475_s_12.1_oneplus_10t_5g
+  lineage_device_tree:
+    repo: https://github.com/lineage-ovaltine-dev/android_device_oneplus_ovaltine
+
+bringup:
+  stage: research
+  destructive_flash_allowed: false
+  required_before_device_flash:
+    - verified stock recovery path
+    - complete critical partition backup
+    - known-good EDL/fastboot recovery procedure
+    - test-bootable UEFI payload
+
+milestones:
+  - id: M0
+    name: Hardware map
+    status: in_progress
+  - id: M1
+    name: Non-destructive EDK2 payload boot
+    status: planned
+  - id: M2
+    name: Framebuffer and serial/debug output
+    status: planned
+  - id: M3
+    name: UFS access from EFI
+    status: planned
+  - id: M4
+    name: Windows PE ARM64 boot
+    status: planned
+  - id: M5
+    name: Core Windows driver bring-up
+    status: planned
+  - id: M6
+    name: GPU acceleration
+    status: planned
+  - id: M7
+    name: IzzOS lightweight profile and gaming validation
+    status: planned
