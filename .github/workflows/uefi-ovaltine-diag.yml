@@ -54,6 +54,21 @@ jobs:
       - name: Verify OvaltineDiag artifact
         run: bash scripts/verify-ovaltine-diag.sh
 
+      - name: Verify route-neutral M2 staging
+        run: |
+          rm -rf .work/m2-staging-test
+          bash scripts/prepare-m2-staging.sh \
+            out/ovaltine-diag/OvaltineDiag.efi \
+            .work/m2-staging-test \
+            CI-UNVALIDATED
+          MANIFEST=.work/m2-staging-test/CI-UNVALIDATED/manifest.txt
+          DERIVED=.work/m2-staging-test/CI-UNVALIDATED/derived
+          grep -q '^Selected launch route: NONE$' "$MANIFEST"
+          grep -q '^Route decision: INSUFFICIENT_DEVICE_DATA$' "$MANIFEST"
+          grep -q '^Persistent writes: FORBIDDEN$' "$MANIFEST"
+          grep -q '^Slot changes: FORBIDDEN$' "$MANIFEST"
+          test -z "$(find "$DERIVED" -mindepth 1 -print -quit)"
+
       - name: Upload diagnostic EFI artifact
         uses: actions/upload-artifact@v4
         with:
