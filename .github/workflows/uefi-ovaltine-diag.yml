@@ -42,6 +42,9 @@ jobs:
       - name: Build OvaltineDiag
         run: bash scripts/build-ovaltine-diag.sh
 
+      - name: Verify OvaltineDiag artifact
+        run: bash scripts/verify-ovaltine-diag.sh
+
       - name: Upload diagnostic EFI artifact
         uses: actions/upload-artifact@v4
         with:
