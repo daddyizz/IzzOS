@@ -65,8 +65,22 @@ Exit condition: repeatable performance profile suitable for heavy desktop softwa
 
 Exit condition: evidence-based compatibility matrix for modern PC games, including AAA titles where technically possible.
 
+## Phase 6 — Companion experience and monetization
+
+- Keep the firmware, UEFI, boot path and Windows desktop core completely ad-free.
+- Do not add advertising code to EDK2, boot services, the lock screen, desktop shell, Start menu, or gaming path.
+- Build optional IzzOS companion software only after the Windows platform is stable enough for daily use.
+- Candidate companion components include IzzOS Control Center, Driver & Update Manager, Game Compatibility Hub, themes/wallpapers, and setup helpers.
+- If monetization is added, use an ad or sponsor system that officially supports the chosen Windows/web companion technology rather than forcing mobile-only SDKs into the OS.
+- Offer an optional Premium/ad-free tier only at the companion layer; core OS functionality must not depend on ads.
+- Measure companion CPU, memory, network and startup overhead and keep it disabled from critical boot/performance paths.
+
+Exit condition: monetization is optional, policy-compatible, measurable, and has no material impact on boot, gaming or core Windows performance.
+
 ## Project principle
 
 **Minimum OS overhead, maximum Windows compatibility.**
 
 IzzOS will not chase a tiny install size by removing components that commonly break drivers, servicing, application installers, emulation or gaming dependencies.
+
+Monetization must never compromise this principle: the IzzOS boot stack and core Windows experience remain ad-free.
