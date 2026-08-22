@@ -14,7 +14,11 @@ fi
 
 git -C "${WORK_DIR}" fetch origin "${EDK2_REV}" --depth=1
 git -C "${WORK_DIR}" checkout --detach "${EDK2_REV}"
-git -C "${WORK_DIR}" submodule update --init --recursive
+
+# OvaltineDiag uses only MdePkg plus BaseTools. Avoid cloning every EDK2
+# third-party submodule; BaseTools needs its Brotli source to build cleanly.
+git -C "${WORK_DIR}" submodule update --init --depth=1 \
+  BaseTools/Source/C/BrotliCompress/brotli
 
 rm -rf "${WORK_DIR}/Platform/IzzOS"
 mkdir -p "${WORK_DIR}/Platform"
