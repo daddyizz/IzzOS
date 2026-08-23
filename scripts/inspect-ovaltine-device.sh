@@ -24,6 +24,7 @@ if have adb; then
     printf 'model: '; adb shell getprop ro.product.model | tr -d '\r'
     printf 'device: '; adb shell getprop ro.product.device | tr -d '\r'
     printf 'product: '; adb shell getprop ro.product.name | tr -d '\r'
+    printf 'vendor-device: '; adb shell getprop ro.product.vendor.device | tr -d '\r'
     printf 'android: '; adb shell getprop ro.build.version.release | tr -d '\r'
     printf 'build-id: '; adb shell getprop ro.build.display.id | tr -d '\r'
     printf 'slot-suffix: '; adb shell getprop ro.boot.slot_suffix | tr -d '\r'
