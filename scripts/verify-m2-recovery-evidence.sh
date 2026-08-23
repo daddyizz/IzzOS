@@ -21,6 +21,7 @@ required_fields=(
   "Stock vendor_boot verified"
   "Stock dtbo verified"
   "Stock vbmeta verified"
+  "Stock recovery image verified"
   "Emergency recovery status"
   "Temporary route candidate"
   "Persistent write required"
@@ -50,6 +51,7 @@ stock_boot="$(field_value "Stock boot image verified" | tr '[:upper:]' '[:lower:
 stock_vendor_boot="$(field_value "Stock vendor_boot verified" | tr '[:upper:]' '[:lower:]')"
 stock_dtbo="$(field_value "Stock dtbo verified" | tr '[:upper:]' '[:lower:]')"
 stock_vbmeta="$(field_value "Stock vbmeta verified" | tr '[:upper:]' '[:lower:]')"
+stock_recovery="$(field_value "Stock recovery image verified" | tr '[:upper:]' '[:lower:]')"
 emergency="$(field_value "Emergency recovery status" | tr '[:lower:]' '[:upper:]')"
 
 if [[ "$persistent" != "no" ]]; then
@@ -66,7 +68,8 @@ for pair in \
   "Stock boot image verified:$stock_boot" \
   "Stock vendor_boot verified:$stock_vendor_boot" \
   "Stock dtbo verified:$stock_dtbo" \
-  "Stock vbmeta verified:$stock_vbmeta"; do
+  "Stock vbmeta verified:$stock_vbmeta" \
+  "Stock recovery image verified:$stock_recovery"; do
   key="${pair%%:*}"
   value="${pair#*:}"
   if [[ "$value" != "yes" ]]; then
