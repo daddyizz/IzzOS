@@ -43,6 +43,7 @@ lower() { tr '[:upper:]' '[:lower:]'; }
 MODEL="$(value_after_label model || true)"
 DEVICE="$(value_after_label device || true)"
 PRODUCT_ADB="$(value_after_label product || true)"
+VENDOR_DEVICE="$(value_after_label vendor-device || true)"
 ANDROID="$(value_after_label android || true)"
 BUILD_ID="$(value_after_label build-id || true)"
 SLOT_SUFFIX="$(value_after_label slot-suffix || true)"
@@ -62,13 +63,17 @@ FB_VERSION="$(fastboot_value version-bootloader || true)"
 
 DEVICE_LC="$(printf '%s' "${DEVICE}" | lower)"
 PRODUCT_LC="$(printf '%s' "${PRODUCT_ADB}" | lower)"
+VENDOR_DEVICE_LC="$(printf '%s' "${VENDOR_DEVICE}" | lower)"
+BUILD_ID_LC="$(printf '%s' "${BUILD_ID}" | lower)"
 FB_PRODUCT_LC="$(printf '%s' "${FB_PRODUCT}" | lower)"
 UNLOCKED_LC="$(printf '%s' "${FB_UNLOCKED}" | lower)"
 USERSPACE_LC="$(printf '%s' "${FB_USERSPACE}" | lower)"
 
 TARGET_MATCH="unknown"
-if [[ -n "${DEVICE_LC}" || -n "${PRODUCT_LC}" || -n "${FB_PRODUCT_LC}" ]]; then
+if [[ -n "${DEVICE_LC}" || -n "${PRODUCT_LC}" || -n "${VENDOR_DEVICE_LC}" || -n "${FB_PRODUCT_LC}" ]]; then
   if [[ "${DEVICE_LC}" == "ovaltine" || "${PRODUCT_LC}" == *"ovaltine"* || "${FB_PRODUCT_LC}" == *"ovaltine"* ]]; then
+    TARGET_MATCH="yes"
+  elif [[ "${PRODUCT_LC}" == "cph2413" && "${DEVICE_LC}" == "op5552l1" && "${VENDOR_DEVICE_LC}" == "op5552l1" && "${BUILD_ID_LC}" == cph2413_* ]]; then
     TARGET_MATCH="yes"
   else
     TARGET_MATCH="no"
@@ -110,6 +115,7 @@ Authorized ADB devices: ${ADB_COUNT:-unknown}
 Model: ${MODEL:-unknown}
 Device: ${DEVICE:-unknown}
 Product: ${PRODUCT_ADB:-unknown}
+Vendor device: ${VENDOR_DEVICE:-unknown}
 Android: ${ANDROID:-unknown}
 Build ID: ${BUILD_ID:-unknown}
 Slot suffix: ${SLOT_SUFFIX:-unknown}
