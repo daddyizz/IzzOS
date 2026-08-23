@@ -8,12 +8,14 @@ on:
       - 'uefi/**'
       - 'scripts/**'
       - 'docs/M1_CURRENT_PAYLOAD.txt'
+      - 'docs/M1_STANDALONE_FIRMWARE_BRINGUP.md'
       - '.github/workflows/uefi-ovaltine-diag.yml'
   pull_request:
     paths:
       - 'uefi/**'
       - 'scripts/**'
       - 'docs/M1_CURRENT_PAYLOAD.txt'
+      - 'docs/M1_STANDALONE_FIRMWARE_BRINGUP.md'
       - '.github/workflows/uefi-ovaltine-diag.yml'
 
 jobs:
@@ -82,6 +84,12 @@ jobs:
 
       - name: Test gated M1 device-test package assembly
         run: bash scripts/test-prepare-m1-device-test-package.sh
+
+      - name: Test standalone firmware readiness gate
+        run: bash scripts/test-check-m1-standalone-firmware-readiness.sh
+
+      - name: Report standalone firmware readiness
+        run: bash scripts/check-m1-standalone-firmware-readiness.sh
 
       - name: Enforce M1 read-only safety gate
         run: bash scripts/check-m1-safety.sh
