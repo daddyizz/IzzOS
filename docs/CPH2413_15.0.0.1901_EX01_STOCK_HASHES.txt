@@ -25,9 +25,16 @@ vbmeta.img
   size: 12 KiB
   sha256: 71463b21c5a8be134789bcb7498dc58a955c4d2c73468a31eee971f9d2914f5e
 
+Recovery image
+--------------
+recovery.img
+  size: 100 MiB
+  sha256: c535cc66e6642dbc5041b30928bf9dae158bc93c44395012ef2ba7b0ecdc96f1
+
 Notes
 -----
 - init_boot is absent from this payload partition list.
+- recovery is explicitly chained by the exact-build top-level vbmeta trust graph.
 - These hashes are provenance evidence only.
 - No proprietary stock images are committed to the repository.
 - Device writes, flashing, slot changes, and launch authorization remain NO.
