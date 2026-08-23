@@ -33,13 +33,13 @@ hex_to_ascii() {
 }
 
 hex_string_list() {
-  local hex="$1" out="" cur="" i pair dec text
+  local hex="$1" out="" cur="" i pair text
   for ((i=0; i+1<${#hex}; i+=2)); do
     pair="${hex:i:2}"
     if [[ "$pair" == "00" ]]; then
       text="$(hex_to_ascii "$cur")"
       if [[ -n "$text" ]]; then
-        [[ -n "$out" ]] && out+="," 
+        [[ -n "$out" ]] && out+=","
         out+="$text"
       fi
       cur=""
@@ -47,7 +47,11 @@ hex_string_list() {
       cur+="$pair"
     fi
   done
-  [[ -n "$cur" ]] && { text="$(hex_to_ascii "$cur")"; [[ -n "$out" ]] && out+=","; out+="$text"; }
+  if [[ -n "$cur" ]]; then
+    text="$(hex_to_ascii "$cur")"
+    [[ -n "$out" ]] && out+=","
+    out+="$text"
+  fi
   printf '%s' "$out"
 }
 
@@ -59,7 +63,12 @@ be32_hex() {
 }
 
 nul_string_at() {
-  local hex="$1" byte_off="$2" limit_bytes="${3:-4096}" pos=$((byte_off*2)) out="" pair i
+  local hex byte_off limit_bytes pos out pair i
+  hex="$1"
+  byte_off="$2"
+  limit_bytes="${3:-4096}"
+  pos=$((byte_off * 2))
+  out=""
   for ((i=0; i<limit_bytes && pos+i*2+1<${#hex}; i++)); do
     pair="${hex:$((pos+i*2)):2}"
     [[ "$pair" == "00" ]] && break
@@ -92,7 +101,9 @@ fdt_summary() {
     return
   fi
 
-  local cursor="$off_struct" struct_end=$((off_struct + size_struct)) token len nameoff propname val_off val_hex node
+  local cursor struct_end token len nameoff propname val_off val_hex node s
+  cursor="$off_struct"
+  struct_end=$((off_struct + size_struct))
   local -a stack=()
   local path="/" model="" compatible="" chosen="no" usable="" memory_regs="" reserved_count=0
   local root_addr_cells="" root_size_cells="" reserved_addr_cells="" reserved_size_cells=""
@@ -108,7 +119,6 @@ fdt_summary() {
         cursor="$(align4 "$cursor")"
         stack+=("$node")
         path="/"
-        local s
         for s in "${stack[@]}"; do
           [[ -n "$s" ]] && path+="$s/"
         done
@@ -119,10 +129,14 @@ fdt_summary() {
         fi
         ;;
       2)
-        if (( ${#stack[@]} > 0 )); then unset 'stack[${#stack[@]}-1]'; stack=("${stack[@]}"); fi
+        if (( ${#stack[@]} > 0 )); then
+          unset 'stack[${#stack[@]}-1]'
+          stack=("${stack[@]}")
+        fi
         path="/"
-        local s
-        for s in "${stack[@]}"; do [[ -n "$s" ]] && path+="$s/"; done
+        for s in "${stack[@]}"; do
+          [[ -n "$s" ]] && path+="$s/"
+        done
         ;;
       3)
         len="$(be32_hex "$hex" "$cursor")"
@@ -193,7 +207,8 @@ fdt_summary() {
 
   for f in "${DTBS[@]}"; do
     b="$(basename "$f")"
-    idx="${b#dtb-}"; idx="${idx%.dtb}"
+    idx="${b#dtb-}"
+    idx="${idx%.dtb}"
     echo "dtb-index: $idx"
     echo "sha256: $(sha256sum "$f" | awk '{print $1}')"
     fdt_summary "$f"
