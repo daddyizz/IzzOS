@@ -77,6 +77,25 @@ build-id: CPH2413_15.0.0.1901(EX01)
 [FASTBOOT] connected devices: 0
 EOF
 
+cat > "${TMP_DIR}/taro-fastboot.txt" <<'EOF'
+[ADB] authorized devices: 0
+[FASTBOOT] connected devices: 1
+--- product ---
+(bootloader) product: taro
+--- current-slot ---
+(bootloader) current-slot: a
+--- slot-count ---
+(bootloader) slot-count: 2
+--- unlocked ---
+(bootloader) unlocked: yes
+--- secure ---
+(bootloader) secure: yes
+--- is-userspace ---
+(bootloader) is-userspace: no
+--- version-bootloader ---
+(bootloader) version-bootloader: test
+EOF
+
 cat > "${TMP_DIR}/fastbootd.txt" <<'EOF'
 [ADB] authorized devices: 0
 [FASTBOOT] connected devices: 1
@@ -126,6 +145,8 @@ EOF
 assert_classification "classic fastboot candidate" "CLASSIC_FASTBOOT_CANDIDATE_UNVERIFIED" "${TMP_DIR}/candidate.txt"
 assert_classification "CPH2413 OxygenOS 15 ADB identity" "NEED_EXACT_FASTBOOT_INSPECTION" "${TMP_DIR}/cph2413-oos15-adb.txt"
 assert_classification "CPH2413 inconsistent tuple blocked" "TARGET_MISMATCH_BLOCKED" "${TMP_DIR}/cph2413-inconsistent.txt"
+assert_classification "taro classic fastboot candidate" "CLASSIC_FASTBOOT_CANDIDATE_UNVERIFIED" "${TMP_DIR}/taro-fastboot.txt"
+grep -Fq 'Target match: platform-compatible' < <(bash "${ANALYZER}" "${TMP_DIR}/taro-fastboot.txt")
 assert_classification "fastbootd blocked" "FASTBOOTD_DETECTED_BLOCKED" "${TMP_DIR}/fastbootd.txt"
 assert_classification "locked bootloader blocked" "LOCKED_BOOTLOADER_BLOCKED" "${TMP_DIR}/locked.txt"
 assert_classification "target mismatch blocked" "TARGET_MISMATCH_BLOCKED" "${TMP_DIR}/mismatch.txt"
