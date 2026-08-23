@@ -88,6 +88,9 @@ jobs:
       - name: Test standalone firmware readiness gate
         run: bash scripts/test-check-m1-standalone-firmware-readiness.sh
 
+      - name: Test SM8475 reserved-memory gap model
+        run: bash scripts/test-model-sm8475-reserved-memory-gaps.sh
+
       - name: Report standalone firmware readiness
         run: bash scripts/check-m1-standalone-firmware-readiness.sh
 
