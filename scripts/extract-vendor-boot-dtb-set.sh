@@ -67,7 +67,7 @@ header_pages="$(align_up "$header_size" "$page_size")"
 ramdisk_pages="$(align_up "$ramdisk_size" "$page_size")"
 dtb_offset=$((header_pages + ramdisk_pages))
 
-rm -f "$OUT_DIR"/dtb-*.dtb "$OUT_DIR"/vendor_boot.dtb "$OUT_DIR"/MANIFEST.txt
+rm -f "$OUT_DIR"/dtb-*.dtb "$OUT_DIR"/vendor_boot.dtb "$OUT_DIR"/MANIFEST.txt "$OUT_DIR"/SUMMARY.txt
 
 dd if="$IMG" of="$OUT_DIR/vendor_boot.dtb" bs=1 skip="$dtb_offset" count="$dtb_size" status=none
 
@@ -77,8 +77,11 @@ if [[ "$payload_size" -ne "$dtb_size" ]]; then
   exit 1
 fi
 
+# Keep the loop in the current shell. A pipeline such as `while ...; done | tee`
+# would execute the loop in a subshell on Bash and lose the final idx value.
 cursor=0
 idx=0
+: > "$OUT_DIR/MANIFEST.txt"
 while (( cursor + 8 <= dtb_size )); do
   blob="$OUT_DIR/vendor_boot.dtb"
   m="$(dd if="$blob" bs=1 skip="$cursor" count=4 status=none | od -An -tx1 -v | tr -d ' \n')"
@@ -93,10 +96,10 @@ while (( cursor + 8 <= dtb_size )); do
   out="$OUT_DIR/dtb-$idx.dtb"
   dd if="$blob" of="$out" bs=1 skip="$cursor" count="$total" status=none
   sha="$(sha256sum "$out" | awk '{print $1}')"
-  printf 'dtb-index: %d offset=0x%X size=%d sha256=%s\n' "$idx" "$cursor" "$total" "$sha"
+  printf 'dtb-index: %d offset=0x%X size=%d sha256=%s\n' "$idx" "$cursor" "$total" "$sha" >> "$OUT_DIR/MANIFEST.txt"
   cursor=$((cursor + total))
   idx=$((idx + 1))
-done | tee "$OUT_DIR/MANIFEST.txt"
+done
 
 {
   echo "IzzOS exact vendor_boot DTB set"
@@ -123,7 +126,7 @@ done | tee "$OUT_DIR/MANIFEST.txt"
     echo "classification: VENDOR_BOOT_DTB_FORMAT_UNRESOLVED"
     echo "decision: the DTB payload did not parse as a simple concatenation of FDT blobs. Keep standalone firmware placement blocked."
   fi
-} | tee "$OUT_DIR/SUMMARY.txt"
+} > "$OUT_DIR/SUMMARY.txt"
 
 cat "$OUT_DIR/MANIFEST.txt"
 cat "$OUT_DIR/SUMMARY.txt"
