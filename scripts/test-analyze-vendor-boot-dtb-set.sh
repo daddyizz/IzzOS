@@ -7,7 +7,7 @@ trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$TMP/set"
 
 if ! command -v dtc >/dev/null 2>&1; then
-  echo "SKIP: dtc unavailable"
+  echo "SKIP: dtc unavailable for synthetic fixture generation"
   exit 0
 fi
 
@@ -52,12 +52,22 @@ dtc -I dts -O dtb "$TMP/1.dts" -o "$TMP/set/dtb-1.dtb"
 OUT="$TMP/out.txt"
 bash "$ROOT/scripts/analyze-vendor-boot-dtb-set.sh" "$TMP/set" "$OUT" >/dev/null
 
+grep -q '^Parser: PURE_BASH_FDT_PROPERTY_WALKER_OD_ONLY$' "$OUT"
 grep -q '^DTB count: 2$' "$OUT"
-grep -q '^model: "IzzOS test Cape 0"$' "$OUT"
-grep -q '^compatible: "qcom,cape"$' "$OUT"
-grep -q '^memory-node-count: 1$' "$OUT"
+grep -q '^model: IzzOS test Cape 0$' "$OUT"
+grep -q '^compatible: qcom,cape$' "$OUT"
+grep -q '^root-address-cells: 2$' "$OUT"
+grep -q '^root-size-cells: 2$' "$OUT"
+grep -q '^memory-reg-raw-hex: 00000000800000000000000010000000$' "$OUT"
+grep -q '^reserved-memory-child-count: 1$' "$OUT"
 grep -q '^chosen-present: yes$' "$OUT"
-grep -q '^classification: VENDOR_BOOT_DTB_SET_STRUCTURALLY_ANALYZED$' "$OUT"
-grep -q '^  dtb-1 changed-lines-vs-dtb-0: ' "$OUT"
+grep -q '^chosen-usable-memory-range-raw-hex: 00000000800000000000000010000000$' "$OUT"
+grep -q '^  test@80000000 reg=00000000800000000000000000001000$' "$OUT"
+grep -q '^classification: VENDOR_BOOT_DTB_SET_PROPERTY_WALKED_NO_DTC$' "$OUT"
 
-echo "PASS: vendor_boot DTB structural analyzer"
+if grep -Eq 'command not found|strings:|dtc not found' "$OUT"; then
+  echo "ERROR: analyzer leaked an external parser dependency" >&2
+  exit 1
+fi
+
+echo "PASS: od-only vendor_boot DTB property walker"
