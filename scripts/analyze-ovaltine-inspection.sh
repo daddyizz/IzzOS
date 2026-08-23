@@ -75,6 +75,11 @@ if [[ -n "${DEVICE_LC}" || -n "${PRODUCT_LC}" || -n "${VENDOR_DEVICE_LC}" || -n 
     TARGET_MATCH="yes"
   elif [[ "${PRODUCT_LC}" == "cph2413" && "${DEVICE_LC}" == "op5552l1" && "${VENDOR_DEVICE_LC}" == "op5552l1" && "${BUILD_ID_LC}" == cph2413_* ]]; then
     TARGET_MATCH="yes"
+  elif [[ -z "${DEVICE_LC}" && -z "${PRODUCT_LC}" && -z "${VENDOR_DEVICE_LC}" && "${FB_PRODUCT_LC}" == "taro" ]]; then
+    # Qualcomm bootloaders may expose a platform-level product rather than the OEM codename.
+    # This is NOT sufficient to prove OnePlus 10T identity by itself; merger must bind it
+    # to an ADB capture that positively identifies the exact device/build.
+    TARGET_MATCH="platform-compatible"
   else
     TARGET_MATCH="no"
   fi
