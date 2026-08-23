@@ -41,12 +41,21 @@ else
 fi
 
 status="INCOMPLETE_METADATA"
-if [[ -n "$header" && -n "$pagesize" ]]; then
-  if [[ "$header" == "4" && "$pagesize" == "4096" ]]; then
-    status="MATCHES_SOURCE_EXPECTATION"
-  else
+if [[ -n "$header" ]]; then
+  if [[ "$header" != "4" ]]; then
     status="MISMATCH_HARD_STOP"
+  elif [[ -n "$pagesize" && "$pagesize" != "4096" ]]; then
+    status="MISMATCH_HARD_STOP"
+  elif [[ "$header" == "4" ]]; then
+    # AOSP unpack_bootimg does not always print page size for boot header v4.
+    # Header v4 is still positively observed; page-size confirmation remains a
+    # separate source/format invariant and must not be fabricated from absence.
+    status="HEADER_V4_CONFIRMED_PAGE_SIZE_UNREPORTED"
   fi
+fi
+
+if [[ "$header" == "4" && "$pagesize" == "4096" ]]; then
+  status="MATCHES_SOURCE_EXPECTATION"
 fi
 
 echo "classification: $status"
@@ -54,6 +63,9 @@ echo "classification: $status"
 case "$status" in
   MATCHES_SOURCE_EXPECTATION)
     echo "decision: metadata is consistent with current source-backed expectation, but route-specific packaging remains blocked until exact vendor_boot/DTBO/AVB and recovery gates are verified."
+    ;;
+  HEADER_V4_CONFIRMED_PAGE_SIZE_UNREPORTED)
+    echo "decision: boot header v4 is confirmed. The inspection tool did not report page size, so do not infer one from the text output; continue only to independent vendor_boot/DTBO/AVB verification and keep route-specific packaging blocked."
     ;;
   MISMATCH_HARD_STOP)
     echo "decision: stop automatic packaging; exact stock firmware format differs from current source-backed expectation."
