@@ -17,8 +17,10 @@ fi
 
 hex_remote_file() {
   local path="$1"
-  if adb shell "test -r '$path'" >/dev/null 2>&1; then
-    adb exec-out cat "$path" 2>/dev/null | od -An -tx1 -v | tr -d ' \n'
+  local data
+  data="$(adb exec-out cat "$path" 2>/dev/null | od -An -tx1 -v | tr -d ' \n' || true)"
+  if [[ -n "$data" ]]; then
+    printf '%s' "$data"
   else
     printf 'UNAVAILABLE'
   fi
@@ -29,6 +31,10 @@ text_prop() {
   adb shell getprop "$key" 2>/dev/null | tr -d '\r\n'
 }
 
+safe_shell() {
+  adb shell "$1" 2>/dev/null | tr -d '\r' || true
+}
+
 DT_BASE=""
 for candidate in /proc/device-tree /sys/firmware/devicetree/base; do
   if adb shell "test -d '$candidate'" >/dev/null 2>&1; then
@@ -36,6 +42,9 @@ for candidate in /proc/device-tree /sys/firmware/devicetree/base; do
     break
   fi
 done
+
+PAGE_SIZE="$(safe_shell 'getconf PAGESIZE 2>/dev/null || toybox getconf PAGESIZE 2>/dev/null' | head -n1)"
+[[ "$PAGE_SIZE" =~ ^[0-9]+$ ]] || PAGE_SIZE="UNAVAILABLE"
 
 {
   echo "IzzOS M1 runtime memory evidence"
@@ -48,10 +57,15 @@ done
   echo "Target device: $(text_prop ro.product.device)"
   echo "Build ID: $(text_prop ro.build.display.id)"
   echo "Slot suffix: $(text_prop ro.boot.slot_suffix)"
+  echo "Kernel page size: $PAGE_SIZE"
   echo "Device-tree base: ${DT_BASE:-UNAVAILABLE}"
   echo
 
   if [[ -n "$DT_BASE" ]]; then
+    echo "Device-tree access diagnostics:"
+    safe_shell "ls -ldZ '$DT_BASE' '$DT_BASE/memory' '$DT_BASE/memory@0' '$DT_BASE/reserved-memory' 2>/dev/null"
+    echo
+
     memory_reg="$(hex_remote_file "$DT_BASE/memory/reg")"
     if [[ "$memory_reg" == "UNAVAILABLE" ]]; then
       memory_reg="$(hex_remote_file "$DT_BASE/memory@0/reg")"
@@ -82,6 +96,7 @@ done
 
     echo "Chosen usable-memory-range hex: $(hex_remote_file "$DT_BASE/chosen/linux,usable-memory-range")"
   else
+    echo "Device-tree access diagnostics: UNAVAILABLE"
     echo "Memory reg hex: UNAVAILABLE"
     echo "Reserved-memory nodes:"
     echo "  UNAVAILABLE"
@@ -89,24 +104,75 @@ done
   fi
 
   echo
+  echo "Raw FDT fallback:"
+  if adb shell "test -e /sys/firmware/fdt" >/dev/null 2>&1; then
+    safe_shell "ls -lZ /sys/firmware/fdt"
+    fdt_size="$(safe_shell 'stat -c %s /sys/firmware/fdt 2>/dev/null' | head -n1)"
+    [[ "$fdt_size" =~ ^[0-9]+$ ]] || fdt_size="UNAVAILABLE"
+    echo "FDT size: $fdt_size"
+    echo "FDT first 32 bytes hex: $(adb exec-out dd if=/sys/firmware/fdt bs=32 count=1 2>/dev/null | od -An -tx1 -v | tr -d ' \n' || true)"
+  else
+    echo "UNAVAILABLE"
+  fi
+
+  echo
   echo "Proc iomem snapshot:"
-  adb shell cat /proc/iomem 2>/dev/null | tr -d '\r' || echo "UNAVAILABLE"
+  iomem="$(safe_shell 'cat /proc/iomem')"
+  if [[ -n "$iomem" ]]; then
+    printf '%s\n' "$iomem"
+  else
+    echo "UNAVAILABLE"
+  fi
+
+  echo
+  echo "Proc zoneinfo physical-page fallback:"
+  zoneinfo="$(safe_shell "awk '/^Node [0-9]+, zone / {print; next} /^[[:space:]]+start_pfn:/ {print; next} /^[[:space:]]+spanned[[:space:]]+/ {print; next} /^[[:space:]]+present[[:space:]]+/ {print; next} /^[[:space:]]+managed[[:space:]]+/ {print; next}' /proc/zoneinfo")"
+  if [[ -n "$zoneinfo" ]]; then
+    printf '%s\n' "$zoneinfo"
+  else
+    echo "UNAVAILABLE"
+  fi
+
+  echo
+  echo "Sysfs memory-block fallback:"
+  block_size="$(safe_shell 'cat /sys/devices/system/memory/block_size_bytes 2>/dev/null' | head -n1)"
+  if [[ -n "$block_size" ]]; then
+    echo "block_size_bytes: $block_size"
+    safe_shell "for d in /sys/devices/system/memory/memory[0-9]*; do [ -d \"\$d\" ] || continue; i=\$(basename \"\$d\"); p=\$(cat \"\$d/phys_index\" 2>/dev/null); s=\$(cat \"\$d/state\" 2>/dev/null); printf '%s phys_index=%s state=%s\\n' \"\$i\" \"\$p\" \"\$s\"; done"
+  else
+    echo "UNAVAILABLE"
+  fi
+
+  echo
+  echo "Boot property memory hints:"
+  safe_shell "getprop | grep -E '\\[ro\\.boot\\..*(mem|ddr|ram)|\\[ro\\.hardware\\.ram|\\[ro\\.config\\.low_ram'"
+
   echo
   echo "Proc meminfo summary:"
-  adb shell "grep -E '^(MemTotal|MemFree|MemAvailable|CmaTotal|CmaFree):' /proc/meminfo 2>/dev/null" | tr -d '\r' || true
+  safe_shell "grep -E '^(MemTotal|MemFree|MemAvailable|CmaTotal|CmaFree):' /proc/meminfo"
 } > "$OUT"
 
 memory_hex="$(awk -F': ' '$1 == "Memory reg hex" {print $2; exit}' "$OUT")"
+zone_start="$(awk '$1 == "start_pfn:" && $2 ~ /^[0-9]+$/ {print $2; exit}' "$OUT")"
+block_size="$(awk -F': ' '$1 == "block_size_bytes" {print $2; exit}' "$OUT")"
 classification="M1_RUNTIME_MEMORY_EVIDENCE_INCOMPLETE"
 if [[ -n "$memory_hex" && "$memory_hex" != "UNAVAILABLE" && "$memory_hex" != "00000000000000000000000000000000" ]]; then
   classification="M1_RUNTIME_MEMORY_EVIDENCE_CAPTURED"
+elif [[ -n "$zone_start" || -n "$block_size" ]]; then
+  classification="M1_RUNTIME_MEMORY_FALLBACK_EVIDENCE_CAPTURED"
 fi
 
 echo "classification: $classification" >> "$OUT"
-if [[ "$classification" == "M1_RUNTIME_MEMORY_EVIDENCE_CAPTURED" ]]; then
-  echo "decision: runtime-patched DRAM evidence was captured. This does not yet select a firmware load range; reserved-memory and overlap analysis are still required before Ovaltine.dsc/Ovaltine.fdf or device launch." >> "$OUT"
-else
-  echo "decision: runtime DRAM evidence is missing or unusable. Keep standalone firmware layout and device launch blocked." >> "$OUT"
-fi
+case "$classification" in
+  M1_RUNTIME_MEMORY_EVIDENCE_CAPTURED)
+    echo "decision: runtime-patched DT DRAM evidence was captured. This does not yet select a firmware load range; reserved-memory and overlap analysis are still required before Ovaltine.dsc/Ovaltine.fdf or device launch." >> "$OUT"
+    ;;
+  M1_RUNTIME_MEMORY_FALLBACK_EVIDENCE_CAPTURED)
+    echo "decision: direct DT DRAM cells remain restricted, but kernel-exposed physical-memory fallback evidence was captured. Analyze it conservatively and do not select an FD range unless it can be reconciled with reserved-memory exclusions and exact-device evidence." >> "$OUT"
+    ;;
+  *)
+    echo "decision: runtime DRAM evidence is missing or unusable. Keep standalone firmware layout and device launch blocked." >> "$OUT"
+    ;;
+esac
 
 cat "$OUT"
