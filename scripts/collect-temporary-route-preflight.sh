@@ -19,7 +19,10 @@ getvar() {
   local key="$1"
   local out
   out="$(fastboot getvar "$key" 2>&1 || true)"
-  printf '%s\n' "$out" | sed -nE "s/^\(bootloader\)[[:space:]]*${key}:[[:space:]]*//p" | head -n1
+  printf '%s\n' "$out" \
+    | tr -d '\r' \
+    | sed -nE "s/^[[:space:]]*(\(bootloader\)[[:space:]]*)?${key}:[[:space:]]*//p" \
+    | head -n1
 }
 
 product="$(getvar product)"
@@ -48,7 +51,7 @@ max_download="$(getvar max-download-size)"
 } > "$OUT"
 
 status="TEMPORARY_ROUTE_PREFLIGHT_INCOMPLETE"
-if [[ "${is_userspace,,}" == "no" && "${unlocked,,}" == "yes" && "$slot_count" == "2" && -n "$slot" ]]; then
+if [[ "${is_userspace,,}" == "no" && "${unlocked,,}" == "yes" && "$slot_count" == "2" && -n "$slot" && "$slot" != "UNKNOWN" ]]; then
   status="TEMPORARY_ROUTE_PREFLIGHT_PASS"
 fi
 
