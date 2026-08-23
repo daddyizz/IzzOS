@@ -5,7 +5,11 @@ ROOT=/sys/devices/system/memory
 mkdir -p "$(dirname "$OUT")"
 
 list_blocks() {
-  adb shell 'for d in /sys/devices/system/memory/memory*; do [ -d "$d" ] || continue; b=${d##*/}; n=${b#memory}; case "$n" in *[!0-9]*|'') continue;; esac; if [ "$n" -ge 256 ] && [ "$n" -le 367 ]; then echo "$n"; fi; done' 2>/dev/null | tr -d '\r' | sort -n
+  adb shell "ls -1 '$ROOT'" 2>/dev/null \
+    | tr -d '\r' \
+    | sed -n 's/^memory\([0-9][0-9]*\)$/\1/p' \
+    | awk '$1 >= 256 && $1 <= 367' \
+    | sort -n
 }
 
 read_attr() {
@@ -27,6 +31,9 @@ read_attr() {
 
   total=0; state_ok=0; zone_normal=0; readable=0
   mapfile -t blocks < <(list_blocks)
+  echo "enumerated-block-indices: ${blocks[*]:-NONE}"
+  echo
+
   for i in "${blocks[@]}"; do
     total=$((total+1))
     state="$(read_attr "$i" state)"
