@@ -26,6 +26,7 @@ cat > "${TMP_DIR}/candidate.txt" <<'EOF'
 model: OnePlus 10T 5G
 device: ovaltine
 product: CPH2415
+vendor-device: ovaltine
 android: 16
 build-id: TEST.BUILD
 slot-suffix: _a
@@ -47,6 +48,33 @@ vbmeta-device-state: unlocked
 (bootloader) is-userspace: no
 --- version-bootloader ---
 (bootloader) version-bootloader: test
+EOF
+
+cat > "${TMP_DIR}/cph2413-oos15-adb.txt" <<'EOF'
+[ADB] authorized devices: 1
+[ADB] device identity / firmware
+model: OnePlus 10T 5G
+device: OP5552L1
+product: CPH2413
+vendor-device: OP5552L1
+android: 15
+build-id: CPH2413_15.0.0.1901(EX01)
+slot-suffix: _a
+verified-boot-state: green
+vbmeta-device-state: locked
+[FASTBOOT] connected devices: 0
+EOF
+
+cat > "${TMP_DIR}/cph2413-inconsistent.txt" <<'EOF'
+[ADB] authorized devices: 1
+[ADB] device identity / firmware
+model: OnePlus 10T 5G
+device: OP5552L1
+product: CPH2413
+vendor-device: WRONGDEVICE
+android: 15
+build-id: CPH2413_15.0.0.1901(EX01)
+[FASTBOOT] connected devices: 0
 EOF
 
 cat > "${TMP_DIR}/fastbootd.txt" <<'EOF'
@@ -96,6 +124,8 @@ product: CPH2415
 EOF
 
 assert_classification "classic fastboot candidate" "CLASSIC_FASTBOOT_CANDIDATE_UNVERIFIED" "${TMP_DIR}/candidate.txt"
+assert_classification "CPH2413 OxygenOS 15 ADB identity" "NEED_EXACT_FASTBOOT_INSPECTION" "${TMP_DIR}/cph2413-oos15-adb.txt"
+assert_classification "CPH2413 inconsistent tuple blocked" "TARGET_MISMATCH_BLOCKED" "${TMP_DIR}/cph2413-inconsistent.txt"
 assert_classification "fastbootd blocked" "FASTBOOTD_DETECTED_BLOCKED" "${TMP_DIR}/fastbootd.txt"
 assert_classification "locked bootloader blocked" "LOCKED_BOOTLOADER_BLOCKED" "${TMP_DIR}/locked.txt"
 assert_classification "target mismatch blocked" "TARGET_MISMATCH_BLOCKED" "${TMP_DIR}/mismatch.txt"
