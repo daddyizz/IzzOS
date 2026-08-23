@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-OUT="$(python3 "$ROOT/scripts/model-sm8475-reserved-memory-gaps.py")"
+OUT="$(bash "$ROOT/scripts/model-sm8475-reserved-memory-gaps.sh")"
 
 grep -q '^classification: SOURCE_BACKED_FIXED_CARVEOUT_MODEL_ONLY$' <<<"$OUT"
 grep -q '^runtime DRAM span base evidence: 0x80000000$' <<<"$OUT"
