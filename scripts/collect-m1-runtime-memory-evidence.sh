@@ -18,8 +18,18 @@ fi
 hex_remote_file() {
   local path="$1"
   local data
+
+  # Android's adb exec-out can surface the remote toybox/cat diagnostic on the
+  # data stream even when the property itself is unreadable. Probe readability
+  # with the remote shell exit status first so strings such as "Permission
+  # denied" can never be hex-encoded and mistaken for DT cell data.
+  if ! adb shell "cat '$path' >/dev/null 2>&1" >/dev/null 2>&1; then
+    printf 'UNAVAILABLE'
+    return
+  fi
+
   data="$(adb exec-out cat "$path" 2>/dev/null | od -An -tx1 -v | tr -d ' \n' || true)"
-  if [[ -n "$data" ]]; then
+  if [[ -n "$data" && "$data" =~ ^[0-9a-fA-F]+$ && $(( ${#data} % 2 )) -eq 0 ]]; then
     printf '%s' "$data"
   else
     printf 'UNAVAILABLE'
@@ -110,7 +120,11 @@ PAGE_SIZE="$(safe_shell 'getconf PAGESIZE 2>/dev/null || toybox getconf PAGESIZE
     fdt_size="$(safe_shell 'stat -c %s /sys/firmware/fdt 2>/dev/null' | head -n1)"
     [[ "$fdt_size" =~ ^[0-9]+$ ]] || fdt_size="UNAVAILABLE"
     echo "FDT size: $fdt_size"
-    echo "FDT first 32 bytes hex: $(adb exec-out dd if=/sys/firmware/fdt bs=32 count=1 2>/dev/null | od -An -tx1 -v | tr -d ' \n' || true)"
+    if adb shell "dd if=/sys/firmware/fdt bs=32 count=1 of=/dev/null 2>/dev/null" >/dev/null 2>&1; then
+      echo "FDT first 32 bytes hex: $(adb exec-out dd if=/sys/firmware/fdt bs=32 count=1 2>/dev/null | od -An -tx1 -v | tr -d ' \n' || true)"
+    else
+      echo "FDT first 32 bytes hex: UNAVAILABLE"
+    fi
   else
     echo "UNAVAILABLE"
   fi
@@ -156,7 +170,7 @@ memory_hex="$(awk -F': ' '$1 == "Memory reg hex" {print $2; exit}' "$OUT")"
 zone_start="$(awk '$1 == "start_pfn:" && $2 ~ /^[0-9]+$/ {print $2; exit}' "$OUT")"
 block_size="$(awk -F': ' '$1 == "block_size_bytes" {print $2; exit}' "$OUT")"
 classification="M1_RUNTIME_MEMORY_EVIDENCE_INCOMPLETE"
-if [[ -n "$memory_hex" && "$memory_hex" != "UNAVAILABLE" && "$memory_hex" != "00000000000000000000000000000000" ]]; then
+if [[ -n "$memory_hex" && "$memory_hex" != "UNAVAILABLE" && "$memory_hex" =~ ^[0-9a-fA-F]+$ && ${#memory_hex} -ge 32 && $(( ${#memory_hex} % 16 )) -eq 0 && "$memory_hex" != "00000000000000000000000000000000" ]]; then
   classification="M1_RUNTIME_MEMORY_EVIDENCE_CAPTURED"
 elif [[ -n "$zone_start" || -n "$block_size" ]]; then
   classification="M1_RUNTIME_MEMORY_FALLBACK_EVIDENCE_CAPTURED"
