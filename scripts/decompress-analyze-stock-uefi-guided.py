@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-import sys, struct, hashlib, lzma, gzip, zlib, os
+import sys, struct, hashlib, lzma, gzip, zlib
 from pathlib import Path
 
 LZMA_GUID_LE = bytes.fromhex('98584eee143959429d6edc7bd79403cf')
 GZIP_QC_GUID_LE = bytes.fromhex('e91f301d79be534391c2d23bc959ae0c')
+KNOWN_STOCK_GUIDED_OFFSETS = (0x4B0E0, 0x1A1748)
 
 def u24(b,o): return b[o] | (b[o+1]<<8) | (b[o+2]<<16)
 def align(x,a): return (x+a-1)&~(a-1)
@@ -61,10 +62,7 @@ def decompress_guided(g, payload):
             except Exception: pass
         return None,'LZMA_FAILED'
     if g==GZIP_QC_GUID_LE:
-        attempts=[]
-        # Qualcomm guided sections normally carry a gzip stream directly at DataOffset.
-        attempts.append((payload,'GZIP_DIRECT'))
-        # Be tolerant of a small vendor header/prefix before the gzip magic.
+        attempts=[(payload,'GZIP_DIRECT')]
         gz=payload.find(b'\x1f\x8b\x08')
         if gz>0: attempts.append((payload[gz:],f'GZIP_MAGIC_AT_0x{gz:X}'))
         for blob,name in attempts:
@@ -75,29 +73,48 @@ def decompress_guided(g, payload):
         return None,'GZIP_QC_FAILED'
     return None,'UNSUPPORTED_GUID'
 
+def decode_guided_header(data, sp, discovery):
+    if sp+0x18>len(data): return None
+    ss=u24(data,sp); st=data[sp+3]
+    if st!=0x02 or ss<0x1c or sp+ss>len(data): return None
+    g=data[sp+4:sp+20]
+    doff=struct.unpack_from('<H',data,sp+20)[0]
+    attrs=struct.unpack_from('<H',data,sp+22)[0]
+    if doff<0x18 or doff>=ss: return None
+    return (sp,ss,g,doff,attrs,discovery)
+
 def main():
     if len(sys.argv)<4:
         print('usage: decompress-analyze-stock-uefi-guided.py <uefi.img> <outdir> <report>'); return 2
-    inp=Path(sys.argv[1]); outdir=Path(sys.argv[2]); report=Path(sys.argv[3]); outdir.mkdir(parents=True,exist_ok=True); report.parent.mkdir(parents=True,exist_ok=True)
-    data=inp.read_bytes(); lines=['IzzOS exact stock UEFI GUID-defined decompression analysis','Collector mode: READ_ONLY_HOST_SIDE','Device writes: NONE',f'input: {inp}',f'byte-size: {len(data)}',f'sha256: {hashlib.sha256(data).hexdigest()}']
-    outer=find_fvs(data)
-    guided=[]
-    for fs,fl,fh in outer:
+    inp=Path(sys.argv[1]); outdir=Path(sys.argv[2]); report=Path(sys.argv[3])
+    outdir.mkdir(parents=True,exist_ok=True); report.parent.mkdir(parents=True,exist_ok=True)
+    data=inp.read_bytes()
+    lines=['IzzOS exact stock UEFI GUID-defined decompression analysis','Collector mode: READ_ONLY_HOST_SIDE','Device writes: NONE',f'input: {inp}',f'byte-size: {len(data)}',f'sha256: {hashlib.sha256(data).hexdigest()}']
+    guided=[]; seen=set()
+    for fs,fl,fh in find_fvs(data):
         p=align(fs+fh,8); end=fs+fl
         while p+24<=end:
-            if data[p:p+16]==b'\xff'*16: p=align(p+8,8); continue
+            if data[p:p+16]==b'\xff'*16:
+                p=align(p+8,8); continue
             sz=u24(data,p+20)
             if sz in (0,0xffffff) or p+sz>end: break
             sp=p+24; se=p+sz
             while sp+4<=se:
                 ss=u24(data,sp); st=data[sp+3]
                 if ss<4 or sp+ss>se: break
-                if st==0x02 and ss>=0x1c:
-                    g=data[sp+4:sp+20]; doff=struct.unpack_from('<H',data,sp+20)[0]; attrs=struct.unpack_from('<H',data,sp+22)[0]
-                    guided.append((sp,ss,g,doff,attrs,'FV_WALK'))
+                if st==0x02:
+                    ent=decode_guided_header(data,sp,'FV_WALK')
+                    if ent and sp not in seen:
+                        guided.append(ent); seen.add(sp)
                 sp=align(sp+ss,4)
             p=align(p+sz,8)
-    # Cross-check raw GUID discovery without creating duplicate entries.
+    # Exact-stock fallback: prior independent FV parser established these two section offsets.
+    fallback_added=0
+    for sp in KNOWN_STOCK_GUIDED_OFFSETS:
+        if sp not in seen:
+            ent=decode_guided_header(data,sp,'EXACT_STOCK_OFFSET_FALLBACK')
+            if ent:
+                guided.append(ent); seen.add(sp); fallback_added+=1
     raw_hits=[]
     for guid in (LZMA_GUID_LE,GZIP_QC_GUID_LE):
         pos=0
@@ -106,9 +123,10 @@ def main():
             if h<0: break
             raw_hits.append((h,guid)); pos=h+1
     lines.append(f'direct-known-compression-guid-hit-count: {len(raw_hits)}')
+    lines.append(f'exact-stock-offset-fallback-added: {fallback_added}')
     lines.append(f'guided-section-count: {len(guided)}')
     allnames=[]
-    for i,(sp,ss,g,doff,attrs,discovery) in enumerate(guided):
+    for i,(sp,ss,g,doff,attrs,discovery) in enumerate(sorted(guided)):
         gs=guid_str_le(g); po=sp+doff; payload=data[po:sp+ss]
         lines += [f'guided-{i}-discovery: {discovery}',f'guided-{i}-section-offset: 0x{sp:X}',f'guided-{i}-section-size: 0x{ss:X}',f'guided-{i}-guid: {gs}',f'guided-{i}-data-offset: 0x{doff:X}',f'guided-{i}-attributes: 0x{attrs:04X}',f'guided-{i}-payload-size: 0x{len(payload):X}']
         dec,fmt=decompress_guided(g,payload)
