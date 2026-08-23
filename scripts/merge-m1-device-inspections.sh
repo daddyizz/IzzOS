@@ -54,10 +54,14 @@ if [[ "$ADB_TARGET" != "yes" ]]; then
   reason+=("ADB capture does not positively match ovaltine")
   blocked=1
 fi
-if [[ "$FB_TARGET" != "yes" ]]; then
-  reason+=("fastboot capture does not positively match ovaltine")
-  blocked=1
-fi
+case "$FB_TARGET" in
+  yes|platform-compatible)
+    ;;
+  *)
+    reason+=("fastboot capture is neither an exact target match nor an accepted platform-compatible observation")
+    blocked=1
+    ;;
+esac
 if placeholder "$ADB_BUILD"; then
   reason+=("ADB capture does not provide an exact build ID")
   blocked=1
@@ -93,6 +97,7 @@ if [[ "$blocked" -ne 0 ]]; then
     echo "Target: OnePlus 10T 5G / ovaltine / SM8475"
     echo "ADB classification: ${ADB_CLASS:-unknown}"
     echo "Fastboot classification: ${FB_CLASS:-unknown}"
+    echo "Fastboot target observation: ${FB_TARGET:-unknown}"
     echo "Build ID: ${ADB_BUILD:-unknown}"
     echo "ADB slot: ${ADB_SLOT:-unknown}"
     echo "Fastboot slot: ${FB_SLOT:-unknown}"
@@ -120,6 +125,7 @@ Bootloader unlocked: ${FB_UNLOCKED:-unknown}
 Userspace fastboot: ${FB_USERSPACE:-unknown}
 ADB classification: $ADB_CLASS
 Fastboot classification: $FB_CLASS
+Fastboot target observation: $FB_TARGET
 ADB evidence SHA256: $(sha256sum "$ADB_SUMMARY" | awk '{print $1}')
 Fastboot evidence SHA256: $(sha256sum "$FASTBOOT_SUMMARY" | awk '{print $1}')
 Collector mode: READ_ONLY
@@ -127,7 +133,7 @@ Device writes: NONE
 Launch commands executed: NO
 Launch authorization: NO
 
-This file proves only that the supplied ADB-side and fastboot-side captures are internally consistent on target/build/slot fields that are available. It does not prove physical device identity beyond those observations and does not authorize temporary boot, flashing, unlocking, slot changes, or persistent modification.
+This file proves only that the supplied ADB-side exact-device identity and fastboot-side observations are internally consistent on available target/build/slot fields. A fastboot target observation of platform-compatible is not an exact device identity by itself; it is accepted only when bound here to an ADB capture that positively identifies the exact OnePlus 10T build. This does not authorize temporary boot, flashing, unlocking, slot changes, or persistent modification.
 EOF
 
 sha256sum "$OUT" > "$CHECKSUMS"
