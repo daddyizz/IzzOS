@@ -1,0 +1,33 @@
+IzzOS exact-build stock image hash lock
+=====================================
+Target: OnePlus 10T 5G / ovaltine / SM8475
+Product/region: CPH2413 / India
+Build ID: CPH2413_15.0.0.1901(EX01)
+Acquisition source: exact full OTA ZIP da3072592f5e4b8db4bc5b5d6223d4e6.zip
+OTA ZIP SHA256: 1cac09905168641da3578fb99665c0eb2c276831b4702303da98204fb53ff3f7
+payload.bin SHA256: 3f5c47e6b572c5830bc36b4e6b421bea7fbb498870858020f5ba4e4ab057da10
+
+First-wave images
+-----------------
+boot.img
+  size: 192 MiB
+  sha256: 08bf7cce2df493945da3b3c9e5d6dd24ed9ecdc635c6349c177b61081b737fc8
+
+vendor_boot.img
+  size: 192 MiB
+  sha256: ef230a4e1b9957ce0093f86f9bc8728f344665e741aa0bc584cc65281652e6e0
+
+dtbo.img
+  size: 24 MiB
+  sha256: 2f1efc6328c4a87923489f453c5acc455d3713694178cd2631d022924c106313
+
+vbmeta.img
+  size: 12 KiB
+  sha256: 71463b21c5a8be134789bcb7498dc58a955c4d2c73468a31eee971f9d2914f5e
+
+Notes
+-----
+- init_boot is absent from this payload partition list.
+- These hashes are provenance evidence only.
+- No proprietary stock images are committed to the repository.
+- Device writes, flashing, slot changes, and launch authorization remain NO.
