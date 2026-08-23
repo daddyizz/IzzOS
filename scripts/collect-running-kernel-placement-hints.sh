@@ -35,7 +35,7 @@ shell() { adb shell "$1" 2>/dev/null | tr -d '\r' || true; }
   echo
 
   echo "Kernel symbol placement hints:"
-  syms="$(shell "awk '$3==\"_text\" || $3==\"_stext\" || $3==\"_end\" || $3==\"kimage_voffset\" {print}' /proc/kallsyms 2>/dev/null | head -n 20")"
+  syms="$(shell "awk '\$3==\"_text\" || \$3==\"_stext\" || \$3==\"_end\" || \$3==\"kimage_voffset\" {print}' /proc/kallsyms 2>/dev/null | head -n 20")"
   if [[ -n "$syms" ]]; then printf '%s\n' "$syms"; else echo "UNAVAILABLE"; fi
   echo
 
