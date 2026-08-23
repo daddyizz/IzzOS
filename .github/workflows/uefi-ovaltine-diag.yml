@@ -55,6 +55,9 @@ jobs:
       - name: Test stock boot metadata analyzer
         run: bash scripts/test-analyze-stock-boot-metadata.sh
 
+      - name: Test exact-stock AArch64 kernel header analyzer
+        run: bash scripts/test-analyze-stock-aarch64-kernel-header.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 
