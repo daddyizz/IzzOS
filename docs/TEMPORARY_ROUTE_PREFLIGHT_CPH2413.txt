@@ -1,0 +1,30 @@
+IzzOS temporary-route preflight checkpoint
+=========================================
+Target: OnePlus 10T 5G / CPH2413 / ovaltine / SM8475
+Build ID: CPH2413_15.0.0.1901(EX01)
+Collector mode: READ_ONLY
+Device writes: NONE
+Launch commands executed: NO
+Flash/erase/format/set_active: FORBIDDEN
+
+Observed fastboot context
+-------------------------
+Product: taro
+Current slot: a
+Slot count: 2
+Unlocked: yes
+Secure: yes
+Userspace fastboot: no
+Max download size: 805306368 bytes
+
+Classification: TEMPORARY_ROUTE_PREFLIGHT_PASS
+
+Interpretation
+--------------
+- classic bootloader fastboot is available
+- bootloader is unlocked
+- current A/B slot context is known
+- device is not in fastbootd/userspace fastboot
+- max download size is sufficient for small diagnostic payloads
+
+This validates preflight conditions only. It does not prove that this exact OnePlus 10T bootloader accepts fastboot boot, and it does not authorize device launch. Persistent writes and slot changes remain forbidden.
