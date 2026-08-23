@@ -79,21 +79,30 @@ EOF
 
 cat > "${TMP_DIR}/taro-fastboot.txt" <<'EOF'
 [ADB] authorized devices: 0
+[ADB] no authorized Android device detected.
 [FASTBOOT] connected devices: 1
+[FASTBOOT] read-only bootloader variables
 --- product ---
-(bootloader) product: taro
+product: taro
+finished. total time: 0.031s
 --- current-slot ---
-(bootloader) current-slot: a
+current-slot: a
+finished. total time: 0.031s
 --- slot-count ---
-(bootloader) slot-count: 2
+slot-count: 2
+finished. total time: 0.031s
 --- unlocked ---
-(bootloader) unlocked: yes
+unlocked: yes
+finished. total time: 0.029s
 --- secure ---
-(bootloader) secure: yes
+secure: yes
+finished. total time: 0.031s
 --- is-userspace ---
-(bootloader) is-userspace: no
+is-userspace: no
+finished. total time: 0.031s
 --- version-bootloader ---
-(bootloader) version-bootloader: test
+version-bootloader:
+finished. total time: 0.029s
 EOF
 
 cat > "${TMP_DIR}/fastbootd.txt" <<'EOF'
@@ -146,7 +155,10 @@ assert_classification "classic fastboot candidate" "CLASSIC_FASTBOOT_CANDIDATE_U
 assert_classification "CPH2413 OxygenOS 15 ADB identity" "NEED_EXACT_FASTBOOT_INSPECTION" "${TMP_DIR}/cph2413-oos15-adb.txt"
 assert_classification "CPH2413 inconsistent tuple blocked" "TARGET_MISMATCH_BLOCKED" "${TMP_DIR}/cph2413-inconsistent.txt"
 assert_classification "taro classic fastboot candidate" "CLASSIC_FASTBOOT_CANDIDATE_UNVERIFIED" "${TMP_DIR}/taro-fastboot.txt"
-grep -Fq 'Target match: platform-compatible' < <(bash "${ANALYZER}" "${TMP_DIR}/taro-fastboot.txt")
+TARO_OUTPUT="$(bash "${ANALYZER}" "${TMP_DIR}/taro-fastboot.txt")"
+grep -Fq 'Target match: platform-compatible' <<<"${TARO_OUTPUT}"
+grep -Fq 'Product: unknown' <<<"${TARO_OUTPUT}"
+grep -Fq $'Observed bootloader-side data\n-----------------------------\nFastboot devices: 1\nProduct: taro' <<<"${TARO_OUTPUT}"
 assert_classification "fastbootd blocked" "FASTBOOTD_DETECTED_BLOCKED" "${TMP_DIR}/fastbootd.txt"
 assert_classification "locked bootloader blocked" "LOCKED_BOOTLOADER_BLOCKED" "${TMP_DIR}/locked.txt"
 assert_classification "target mismatch blocked" "TARGET_MISMATCH_BLOCKED" "${TMP_DIR}/mismatch.txt"
