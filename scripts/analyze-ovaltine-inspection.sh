@@ -14,9 +14,16 @@ trim() {
   sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
 }
 
-value_after_label() {
+adb_value() {
   local label="$1"
-  awk -v label="${label}:" 'index($0, label) == 1 {sub("^[^:]+:[[:space:]]*", ""); print; exit}' "${INPUT}" | trim
+  awk -v label="${label}:" '
+    /^\[FASTBOOT\]/ {exit}
+    index($0, label) == 1 {
+      sub("^[^:]+:[[:space:]]*", "")
+      print
+      exit
+    }
+  ' "${INPUT}" | trim
 }
 
 fastboot_value() {
@@ -40,15 +47,15 @@ fastboot_value() {
 
 lower() { tr '[:upper:]' '[:lower:]'; }
 
-MODEL="$(value_after_label model || true)"
-DEVICE="$(value_after_label device || true)"
-PRODUCT_ADB="$(value_after_label product || true)"
-VENDOR_DEVICE="$(value_after_label vendor-device || true)"
-ANDROID="$(value_after_label android || true)"
-BUILD_ID="$(value_after_label build-id || true)"
-SLOT_SUFFIX="$(value_after_label slot-suffix || true)"
-VB_STATE="$(value_after_label verified-boot-state || true)"
-VBMETA_STATE="$(value_after_label vbmeta-device-state || true)"
+MODEL="$(adb_value model || true)"
+DEVICE="$(adb_value device || true)"
+PRODUCT_ADB="$(adb_value product || true)"
+VENDOR_DEVICE="$(adb_value vendor-device || true)"
+ANDROID="$(adb_value android || true)"
+BUILD_ID="$(adb_value build-id || true)"
+SLOT_SUFFIX="$(adb_value slot-suffix || true)"
+VB_STATE="$(adb_value verified-boot-state || true)"
+VBMETA_STATE="$(adb_value vbmeta-device-state || true)"
 
 ADB_COUNT="$(awk -F': ' '/^\[ADB\] authorized devices:/ {print $2; exit}' "${INPUT}" | trim)"
 FASTBOOT_COUNT="$(awk -F': ' '/^\[FASTBOOT\] connected devices:/ {print $2; exit}' "${INPUT}" | trim)"
