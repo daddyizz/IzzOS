@@ -147,6 +147,9 @@ jobs:
       - name: Test M7 fresh one-shot execution-authorization readiness gate
         run: bash scripts/test-verify-m7-one-shot-execution-authorization.sh
 
+      - name: Test M7 token-consumption receipt and execution-result binding gate
+        run: bash scripts/test-verify-m7-token-consumption-execution-result.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 

@@ -622,6 +622,34 @@ M7_FRESH_ONE_SHOT_EXECUTION_TOKEN_READY_ATOMIC_CONSUMPTION_REQUIRED
 
 This is deliberately readiness evidence rather than execution permission. The verifier neither authenticates the self-reported capture or declared project-owner authority nor writes the ledger. An independent authority must authenticate both and atomically record the token as used before any separately authorized wrapper invocation; otherwise concurrent checks could replay it. Wrapper execution, DSC/FDF promotion, container construction, payload launch and every device command remain unauthorized.
 
+## Token-consumption receipt and execution-result binding
+
+A future external executor must preserve both sides of the token-ledger transition and bind its self-reported result to the exact authorization chain and evidence bytes:
+
+```bash
+python3 scripts/verify-m7-token-consumption-execution-result.py \
+  out/m7-one-shot-execution-authorization-readiness.txt \
+  out/m7-one-shot-execution-authorization-request.txt \
+  out/m7-used-token-ledger-before.txt \
+  out/m7-used-token-ledger-after.txt \
+  out/m7-token-consumption-receipt.txt \
+  out/m7-wrapper-execution-evidence.bin \
+  out/m7-wrapper-execution-result.txt \
+  out/m7-token-consumption-execution-result-verification.txt
+```
+
+The host verifier requires the post-use ledger to be the exact pre-use bytes plus one canonical lowercase entry for the authorized token. The token must be absent before and present exactly once after. Schema `IZZOS_M7_ATOMIC_TOKEN_CONSUMPTION_RECEIPT_V1` binds both ledger hashes, the passing readiness report, authorization request, token and non-empty evidence artifact; it asserts a compare-and-append operation, one-to-zero invocation budget and ledger-only write scope. Consumption must occur after readiness evaluation and before authorization expiry.
+
+Schema `IZZOS_M7_BOUND_WRAPPER_EXECUTION_RESULT_V1` then binds the same request, readiness report, token, receipt and evidence artifact. It permits only one asserted non-returning wrapper transfer within the authorization window and rejects SMC, MMIO, storage-write, slot-change, promotion, container or payload-launch claims. Changed artifacts, altered ledgers, duplicate token entries, expired consumption, multiple invocations, unsafe claims, missing bindings and duplicate fields fail closed.
+
+A consistent supplied chain is classified:
+
+```text
+M7_TOKEN_CONSUMPTION_RESULT_SCHEMA_PASS_ATOMICITY_AUTHENTICITY_REQUIRED
+```
+
+Exact before/after bytes prove only the declared ledger transition, not that the external compare-and-append was atomic. Both atomicity and execution remain self-reported and not independently attested. This gate performs no ledger write or device command, cannot retroactively authorize an invocation, and does not permit DSC/FDF promotion, container construction or payload launch.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
