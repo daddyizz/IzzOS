@@ -1,0 +1,150 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+LIB="$ROOT/uefi/Platform/IzzOS/OvaltinePkg/Library/M7SmcccFeatureAvailabilityCollector"
+SERIALIZE="$ROOT/scripts/serialize-m7-smccc-feature-availability-capture.py"
+VERIFY="$ROOT/scripts/verify-m7-smccc-el3-feature-availability.py"
+PYTHON="${PYTHON:-python3}"
+CC="${CC:-cc}"
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+
+"$PYTHON" "$ROOT/scripts/verify-m7-smccc-transcript-emitter-source.py" "$ROOT" > "$TMP/source-contract.txt"
+grep -q '^emitter-measures-before-buffer-write: PASS$' "$TMP/source-contract.txt"
+grep -q '^emitter-is-not-integrated-into-current-diagnostic: PASS$' "$TMP/source-contract.txt"
+grep -q '^classification: M7_SMCCC_TRANSCRIPT_EMITTER_SOURCE_CONTRACT_PASS$' "$TMP/source-contract.txt"
+
+if ! command -v "$CC" >/dev/null 2>&1; then
+  echo "PASS: M7 deterministic SMCCC transcript emitter (source checks; host C compiler unavailable)"
+  exit 0
+fi
+
+cat > "$TMP/handoff.txt" <<'EOF'
+el3-fp-simd-trap-disabled: PASS
+el3-pointer-authentication-access-enabled: PASS
+el3-mte-access-enabled: PASS
+el3-sve-access-enabled: PASS
+el3-sme-access-enabled: NOT_REQUIRED_FEATURE_ABSENT
+secure-el3-observation: SELF_REPORTED_HANDOFF_ASSERTION_ONLY
+secure-el3-prerequisite-compliance: NOT_INDEPENDENTLY_PROVEN
+capture-route-authorization: NOT_PROVEN
+coherency-mechanism-implementation: NOT_PUBLICLY_PROVEN
+sec-wrapper-implementation-authorization: NO
+launch-authorization: NO
+classification: M7_SECURE_EL3_HANDOFF_ASSERTION_SCHEMA_PASS
+EOF
+
+HANDOFF_SHA="$(sha256sum "$TMP/handoff.txt" | awk '{print $1}')"
+HEADER_SHA="$(sha256sum "$LIB/M7SmcccFeatureAvailabilityCollector.h" | awk '{print $1}')"
+SOURCE_SHA="$(sha256sum "$LIB/M7SmcccFeatureAvailabilityCollector.c" | awk '{print $1}')"
+TRANSPORT_SHA="$(sha256sum "$LIB/M7SmcccCallAArch64.S" | awk '{print $1}')"
+EMITTER_HEADER_SHA="$(sha256sum "$LIB/M7SmcccCaptureTranscript.h" | awk '{print $1}')"
+EMITTER_SOURCE_SHA="$(sha256sum "$LIB/M7SmcccCaptureTranscript.c" | awk '{print $1}')"
+
+cat > "$TMP/harness.c" <<'EOF'
+#include <assert.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "M7SmcccCaptureTranscript.h"
+
+typedef struct {
+  M7_SMCCC_RESULT Responses[5];
+  size_t ResponseCount;
+  size_t CallCount;
+} FAKE_TRANSPORT;
+
+static void
+FakeInvoke(uint64_t Fid, uint64_t Arg1, M7_SMCCC_RESULT *Result, void *Context)
+{
+  FAKE_TRANSPORT *Fake = (FAKE_TRANSPORT *)Context;
+  (void)Fid;
+  (void)Arg1;
+  assert(Fake->CallCount < Fake->ResponseCount);
+  *Result = Fake->Responses[Fake->CallCount++];
+}
+
+int main(int Argc, char **Argv)
+{
+  M7_SMCCC_CALLER_STATE State = {2, 1, 1};
+  M7_SMCCC_TRANSCRIPT_BINDING Binding;
+  M7_SMCCC_TRANSCRIPT_BINDING InvalidBinding;
+  M7_SMCCC_CAPTURE Capture;
+  M7_SMCCC_CAPTURE Tampered;
+  FAKE_TRANSPORT Fake = {0};
+  char Buffer[4096];
+  char Small[8] = {'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'};
+  size_t Length;
+  size_t Index;
+
+  assert(Argc == 8);
+  Binding = (M7_SMCCC_TRANSCRIPT_BINDING){Argv[2], Argv[3], Argv[4], Argv[5], Argv[6], Argv[7]};
+
+  if (strcmp(Argv[1], "supported") == 0) {
+    Fake = (FAKE_TRANSPORT){ .Responses = {{0x10004, 0}, {0, 0}, {0, 0x4010000}, {0, 0x500}, {0, 0}}, .ResponseCount = 5 };
+    assert(M7CollectSmcccFeatureAvailability(&State, FakeInvoke, &Fake, &Capture) == M7SmcccCollectorComplete);
+  } else {
+    assert(strcmp(Argv[1], "unsupported") == 0);
+    Fake = (FAKE_TRANSPORT){ .Responses = {{0x10004, 0}, {0xFFFFFFFF, 0}}, .ResponseCount = 2 };
+    assert(M7CollectSmcccFeatureAvailability(&State, FakeInvoke, &Fake, &Capture) == M7SmcccCollectorFeatureUnavailable);
+  }
+
+  assert(M7EmitSmcccCaptureTranscript(&Binding, &Capture, NULL, 0, &Length) == M7SmcccTranscriptBufferTooSmall);
+  assert(Length > sizeof(Small));
+  assert(M7EmitSmcccCaptureTranscript(&Binding, &Capture, Small, sizeof(Small), &Length) == M7SmcccTranscriptBufferTooSmall);
+  for (Index = 0; Index < sizeof(Small); ++Index) {
+    assert(Small[Index] == 'X');
+  }
+  assert(M7EmitSmcccCaptureTranscript(&Binding, &Capture, Buffer, sizeof(Buffer), &Length) == M7SmcccTranscriptSuccess);
+  assert(strlen(Buffer) == Length);
+
+  Tampered = Capture;
+  ++Tampered.CallsIssued;
+  assert(M7EmitSmcccCaptureTranscript(&Binding, &Tampered, Buffer, sizeof(Buffer), &Length) == M7SmcccTranscriptCaptureNotSerializable);
+  Tampered = Capture;
+  Tampered.FeatureQueries[0].RegisterOpcode = 0;
+  assert(M7EmitSmcccCaptureTranscript(&Binding, &Tampered, Buffer, sizeof(Buffer), &Length) == M7SmcccTranscriptCaptureNotSerializable);
+  InvalidBinding = Binding;
+  InvalidBinding.TranscriptEmitterSourceSha256 = "bad";
+  assert(M7EmitSmcccCaptureTranscript(&InvalidBinding, &Capture, Buffer, sizeof(Buffer), &Length) == M7SmcccTranscriptInvalidBinding);
+  assert(M7EmitSmcccCaptureTranscript(&Binding, NULL, Buffer, sizeof(Buffer), &Length) == M7SmcccTranscriptInvalidArgument);
+
+  fputs(Buffer, stdout);
+  return 0;
+}
+EOF
+
+"$CC" -std=c11 -Wall -Wextra -Werror -I"$LIB" \
+  "$LIB/M7SmcccFeatureAvailabilityCollector.c" \
+  "$LIB/M7SmcccCaptureTranscript.c" \
+  "$TMP/harness.c" -o "$TMP/emitter-test"
+
+emit() {
+  local mode="$1" output="$2"
+  "$TMP/emitter-test" "$mode" "$HANDOFF_SHA" "$HEADER_SHA" "$SOURCE_SHA" "$TRANSPORT_SHA" \
+    "$EMITTER_HEADER_SHA" "$EMITTER_SOURCE_SHA" > "$output"
+}
+
+emit supported "$TMP/supported-capture.txt"
+emit supported "$TMP/supported-capture-2.txt"
+cmp "$TMP/supported-capture.txt" "$TMP/supported-capture-2.txt"
+grep -q '^collector-outcome: COMPLETE$' "$TMP/supported-capture.txt"
+grep -q '^calls-issued: 5$' "$TMP/supported-capture.txt"
+grep -q '^collector-call: index=4 fid=0xC0000003 arg1=0x1E1320 x0=0x0 x1=0x0$' "$TMP/supported-capture.txt"
+"$PYTHON" "$SERIALIZE" "$TMP/handoff.txt" "$TMP/supported-capture.txt" "$TMP/supported-raw.txt" "$TMP/supported-report.txt" >/dev/null
+grep -q '^classification: M7_SMCCC_CAPTURE_SERIALIZATION_PASS$' "$TMP/supported-report.txt"
+"$PYTHON" "$VERIFY" "$TMP/handoff.txt" "$TMP/supported-raw.txt" "$TMP/supported-gate.txt" >/dev/null
+grep -q '^classification: M7_SMCCC_EL3_FEATURE_AVAILABILITY_CORROBORATION_PASS$' "$TMP/supported-gate.txt"
+
+emit unsupported "$TMP/unsupported-capture.txt"
+grep -q '^collector-outcome: FEATURE_UNAVAILABLE$' "$TMP/unsupported-capture.txt"
+grep -q '^calls-issued: 2$' "$TMP/unsupported-capture.txt"
+test "$(grep -c '^collector-call:' "$TMP/unsupported-capture.txt")" -eq 2
+"$PYTHON" "$SERIALIZE" "$TMP/handoff.txt" "$TMP/unsupported-capture.txt" "$TMP/unsupported-raw.txt" "$TMP/unsupported-report.txt" >/dev/null
+grep -q '^classification: M7_SMCCC_CAPTURE_SERIALIZATION_PASS$' "$TMP/unsupported-report.txt"
+"$PYTHON" "$VERIFY" "$TMP/handoff.txt" "$TMP/unsupported-raw.txt" "$TMP/unsupported-gate.txt" >/dev/null
+grep -q '^classification: M7_SMCCC_EL3_FEATURE_AVAILABILITY_ROUTE_UNSUPPORTED$' "$TMP/unsupported-gate.txt"
+
+echo "PASS: M7 deterministic SMCCC transcript emitter and serializer round trip"

@@ -28,6 +28,8 @@ HANDOFF_SHA="$(sha256sum "$TMP/handoff.txt" | awk '{print $1}')"
 HEADER_SHA="$(sha256sum "$LIB/M7SmcccFeatureAvailabilityCollector.h" | awk '{print $1}')"
 SOURCE_SHA="$(sha256sum "$LIB/M7SmcccFeatureAvailabilityCollector.c" | awk '{print $1}')"
 TRANSPORT_SHA="$(sha256sum "$LIB/M7SmcccCallAArch64.S" | awk '{print $1}')"
+EMITTER_HEADER_SHA="$(sha256sum "$LIB/M7SmcccCaptureTranscript.h" | awk '{print $1}')"
+EMITTER_SOURCE_SHA="$(sha256sum "$LIB/M7SmcccCaptureTranscript.c" | awk '{print $1}')"
 
 write_capture() {
   local path="$1" outcome="$2" calls="$3" queries="$4"
@@ -37,6 +39,8 @@ secure-el3-handoff-report-sha256: $HANDOFF_SHA
 collector-header-sha256: $HEADER_SHA
 collector-source-sha256: $SOURCE_SHA
 collector-transport-sha256: $TRANSPORT_SHA
+transcript-emitter-header-sha256: $EMITTER_HEADER_SHA
+transcript-emitter-source-sha256: $EMITTER_SOURCE_SHA
 capture-origin: PRE_SEC_NONSECURE_EL2
 caller-security-state: NONSECURE
 caller-exception-level: EL2
@@ -116,6 +120,9 @@ assert_blocked() {
 assert_blocked wrong-source-hash \
   "s/collector-source-sha256: $SOURCE_SHA/collector-source-sha256: 0000000000000000000000000000000000000000000000000000000000000000/" \
   capture-collector-source-sha256-matches
+assert_blocked wrong-emitter-source-hash \
+  "s/transcript-emitter-source-sha256: $EMITTER_SOURCE_SHA/transcript-emitter-source-sha256: 0000000000000000000000000000000000000000000000000000000000000000/" \
+  capture-transcript-emitter-source-sha256-matches
 assert_blocked wrong-fid \
   's/index=1 fid=0x80000001/index=1 fid=0x82000001/' \
   discovery-call-is-exact-success

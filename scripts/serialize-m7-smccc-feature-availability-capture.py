@@ -14,6 +14,8 @@ LIB = ROOT / "uefi/Platform/IzzOS/OvaltinePkg/Library/M7SmcccFeatureAvailability
 HEADER = LIB / "M7SmcccFeatureAvailabilityCollector.h"
 SOURCE = LIB / "M7SmcccFeatureAvailabilityCollector.c"
 TRANSPORT = LIB / "M7SmcccCallAArch64.S"
+EMITTER_HEADER = LIB / "M7SmcccCaptureTranscript.h"
+EMITTER_SOURCE = LIB / "M7SmcccCaptureTranscript.c"
 
 CAPTURE_SCHEMA = "IZZOS_M7_SMCCC_COLLECTOR_CAPTURE_V1"
 RAW_SCHEMA = "IZZOS_M7_SMCCC_EL3_FEATURE_AVAILABILITY_V1"
@@ -78,7 +80,7 @@ def write_report(lines, exit_code=0):
         raise SystemExit(exit_code)
 
 
-for required in (HANDOFF, CAPTURE, HEADER, SOURCE, TRANSPORT):
+for required in (HANDOFF, CAPTURE, HEADER, SOURCE, TRANSPORT, EMITTER_HEADER, EMITTER_SOURCE):
     if not required.is_file():
         raise SystemExit(f"ERROR: required M7 SMCCC serialization input not found: {required}")
 
@@ -90,6 +92,8 @@ component_hashes = {
     "collector-header-sha256": sha256(HEADER),
     "collector-source-sha256": sha256(SOURCE),
     "collector-transport-sha256": sha256(TRANSPORT),
+    "transcript-emitter-header-sha256": sha256(EMITTER_HEADER),
+    "transcript-emitter-source-sha256": sha256(EMITTER_SOURCE),
 }
 outcome = field(capture, "collector-outcome")
 declared_calls = decimal_field(capture, "calls-issued")

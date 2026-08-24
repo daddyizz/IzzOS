@@ -378,6 +378,20 @@ M7_SMCCC_COLLECTOR_SOURCE_CONTRACT_PASS
 
 The prototype is not device-route authorization. Its real transport must not be linked or invoked until a separate gate proves the exact pre-SEC non-secure EL2 route, recovery context and capture-output binding.
 
+## Deterministic collector transcript emitter
+
+`M7SmcccCaptureTranscript` converts only a structurally valid `M7_SMCCC_CAPTURE` into `IZZOS_M7_SMCCC_COLLECTOR_CAPTURE_V1`. It reconstructs the call list from compile-time FIDs and the canonical register-opcode array; no caller-supplied FID, opcode, call count or outcome text is rendered. Only `COMPLETE` and `FEATURE_UNAVAILABLE` captures are serializable. Version, discovery, count, opcode and per-query status invariants must all match the collector state machine.
+
+The emitter owns no storage or firmware I/O. It first measures the complete transcript, rejects an undersized caller buffer without touching it, and writes a NUL-terminated record only when capacity is sufficient. Six exact SHA-256 bindings are mandatory: the Secure EL3 handoff report plus the collector header, C state machine, AArch64 transport, emitter header and emitter source. Hash spelling is normalized to lowercase, giving byte-identical output for equivalent bindings.
+
+The implementation remains absent from the current DSC/INF. A static source gate and host C harness verify the fixed schema/safety lines, canonical supported and unsupported paths, deterministic output, invalid binding/capture rejection, no partial buffer write, and end-to-end compatibility with the serializer and SMCCC route gate:
+
+```text
+M7_SMCCC_TRANSCRIPT_EMITTER_SOURCE_CONTRACT_PASS
+```
+
+This is an output-format bridge only. It neither invokes SMC nor proves or authorizes the pre-SEC route.
+
 ## Deterministic collector-capture serializer
 
 Convert a future collector transcript into the sanitized manifest consumed by the SMCCC route gate:
@@ -390,7 +404,7 @@ python3 scripts/serialize-m7-smccc-feature-availability-capture.py \
   out/m7-smccc-capture-serialization.txt
 ```
 
-Schema `IZZOS_M7_SMCCC_COLLECTOR_CAPTURE_V1` binds the exact handoff report and SHA-256 identities of the collector header, C state machine, and AArch64 transport. The serializer accepts only `COMPLETE` with five canonical calls or `FEATURE_UNAVAILABLE` with the two discovery calls. It rejects version/call errors, reordered or additional calls, changed source identities, vendor/SiP actions, write/launch claims, and any direct `SCR_EL3`, `CPTR_EL3`, `MDCR_EL3`, GIC, ZCR or SMCR field.
+Schema `IZZOS_M7_SMCCC_COLLECTOR_CAPTURE_V1` binds the exact handoff report and SHA-256 identities of the collector header, C state machine, AArch64 transport, emitter header and emitter source. The serializer accepts only `COMPLETE` with five canonical calls or `FEATURE_UNAVAILABLE` with the two discovery calls. It rejects version/call errors, reordered or additional calls, changed source identities, vendor/SiP actions, write/launch claims, and any direct `SCR_EL3`, `CPTR_EL3`, `MDCR_EL3`, GIC, ZCR or SMCR field.
 
 The output is deterministic and contains only the normalized feature-availability masks already defined by the Arm service. A successful serializer report is:
 
