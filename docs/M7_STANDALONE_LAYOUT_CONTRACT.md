@@ -677,6 +677,39 @@ M7_AUTHORITY_ATTESTATION_SIGNATURE_PASS_KEY_GOVERNANCE_REQUIRED
 
 This proves that the holder of the pinned private key endorsed the exact envelope bytes. It does not prove private-key custody, revocation handling or physical-device truth to the verifier, retroactively authorize an execution route, or permit DSC/FDF promotion, container construction or payload launch.
 
+## Authority-key revocation, rotation and anti-rollback governance
+
+Bind a passing authority attestation to the exact currently active key, a separately pinned offline governance root, a signed rotation record and a repository-distributed monotonic checkpoint:
+
+```bash
+python3 scripts/verify-m7-key-rotation-governance.py \
+  out/m7-authority-attestation-verification.txt \
+  out/m7-active-authority-key-manifest.txt \
+  out/m7-active-authority-public-key.pem \
+  out/m7-previous-authority-public-key.pem \
+  out/m7-previous-key-governance-state.txt \
+  out/m7-key-governance-root-manifest.txt \
+  out/m7-key-governance-root-public-key.pem \
+  out/m7-authority-key-rotation-record.txt \
+  out/m7-previous-key-handover-signature.bin \
+  out/m7-governance-root-approval-signature.bin \
+  out/m7-key-governance-anti-rollback-checkpoint.txt \
+  2026-08-25T00:03:00Z \
+  out/m7-key-rotation-governance-verification.txt
+```
+
+The canonical `IZZOS_M7_AUTHORITY_KEY_ROTATION_RECORD_V1` binds a positive governance epoch and sequence, the verifier-calculated digest of a non-empty previous-state artifact, revoked previous-key identity, active manifest/key identity, effective time and strict no-write/no-launch policy. `DUAL_CONTROL_SCHEDULED_HANDOVER` requires valid detached Ed25519 signatures from both the previous authority key and offline governance root. `ROOT_AUTHORIZED_COMPROMISE_REVOCATION` forbids relying on a potentially compromised previous key, requires an empty previous-key signature artifact and accepts only a governance-root signature with reason `COMPROMISE_RECOVERY`.
+
+The canonical `IZZOS_M7_KEY_GOVERNANCE_ANTI_ROLLBACK_CHECKPOINT_V1` must pin the exact rotation-record SHA-256, previous-state digest, active key, governance root and the same minimum epoch/sequence. A lower, altered or mismatched checkpoint fails. The passing authority-attestation report must bind the newly active manifest and key; an attestation using the revoked key fails even if its older signature once verified. Tests also reject changed signed bytes, rogue previous/root signatures, failure to revoke the old key, duplicate fields and signed launch claims.
+
+A consistent supplied governance state is classified:
+
+```text
+M7_KEY_ROTATION_GOVERNANCE_PASS_CHECKPOINT_DISTRIBUTION_REQUIRED
+```
+
+The verifier cannot discover whether a newer checkpoint exists elsewhere. Anti-rollback therefore still depends on distributing the latest repository-reviewed checkpoint and protecting the offline governance-root custody/recovery process. This gate performs no key or device write and does not authorize wrapper execution, promotion, container construction or launch.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:

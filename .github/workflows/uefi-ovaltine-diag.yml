@@ -153,6 +153,9 @@ jobs:
       - name: Test M7 independent authority-attestation signature gate
         run: bash scripts/test-verify-m7-authority-attestation.sh
 
+      - name: Test M7 key rotation, revocation and anti-rollback governance gate
+        run: bash scripts/test-verify-m7-key-rotation-governance.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 
