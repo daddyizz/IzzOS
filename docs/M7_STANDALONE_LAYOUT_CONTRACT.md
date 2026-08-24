@@ -547,6 +547,30 @@ M7_DEVICE_RECOVERY_EVIDENCE_CHAIN_BOUND_WRAPPER_EXECUTION_REQUIRED
 
 This means only that the supplied files are internally consistent and their exact bytes are bound by the report. It does not cryptographically attest who collected them. Independent capture authenticity and actual SEC/PrePi wrapper execution remain blockers; DSC/FDF promotion, container construction and every device command remain unauthorized.
 
+## SEC/PrePi wrapper execution assertion schema
+
+The repository deliberately contains no SEC/PrePi wrapper implementation while its execution route remains unauthorized. A host-only verifier is available to fail closed on a future self-reported execution assertion without treating that assertion as proof:
+
+```bash
+python3 scripts/verify-m7-sec-prepi-wrapper-execution.py \
+  out/m7-standalone-sec-entry-requirements.txt \
+  out/m7-qualcomm-entry-observation.txt \
+  out/m7-device-promotion-readiness.txt \
+  out/non-integrated-sec-prepi-wrapper.bin \
+  out/m7-sec-prepi-wrapper-execution-raw.txt \
+  out/m7-sec-prepi-wrapper-execution.txt
+```
+
+The verifier binds the exact prerequisite reports and wrapper artifact bytes, requires the pre-wrapper register state to match the exact entry observation, and checks DTB preservation, zero `x1`–`x3`, masked exceptions, disabled MMU, stable timer state, bounded stack within temporary RAM, image coherency normalization and one non-returning transfer to a patched SEC/PrePi entrypoint. Duplicate fields, changed input or artifact bytes, a moved DTB register, enabled MMU, invalid stack range, MMIO, SMC, monitor changes, writes, slot changes or launch claims fail closed.
+
+A structurally consistent assertion is classified:
+
+```text
+M7_SEC_PREPI_WRAPPER_EXECUTION_ASSERTION_SCHEMA_PASS_ROUTE_AUTHENTICITY_REQUIRED
+```
+
+This status remains self-reported. The verifier does not inspect the artifact's code semantics, authorize the execution route, establish final runtime-destination ownership, prove that execution occurred, or permit wrapper implementation/integration. DSC/FDF promotion, container construction and launch remain blocked.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
