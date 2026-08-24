@@ -595,6 +595,33 @@ M7_RUNTIME_DESTINATION_OWNERSHIP_SCHEMA_PASS_AUTHENTICITY_FRESHNESS_REQUIRED
 
 This result is deliberately limited to one self-reported capture instant. Runtime allocation ownership can change, so the snapshot must be independently authenticated and fresh at any separately authorized execution. It does not select a persistent PCD, authorize wrapper execution, promote DSC/FDF files, construct a container or authorize launch.
 
+## Fresh one-shot execution-authorization readiness gate
+
+Bind the exact ownership result to the wrapper and device-promotion reports, a five-minute-or-shorter UTC window, a single-use request and an explicit used-token ledger:
+
+```bash
+python3 scripts/verify-m7-one-shot-execution-authorization.py \
+  out/m7-runtime-destination-ownership.txt \
+  out/m7-sec-prepi-wrapper-execution.txt \
+  out/m7-device-promotion-readiness.txt \
+  out/m7-one-shot-execution-authorization-request.txt \
+  out/m7-used-one-shot-token-ledger.txt \
+  2026-08-25T00:01:00Z \
+  out/m7-one-shot-execution-authorization-readiness.txt
+```
+
+The request schema is `IZZOS_M7_ONE_SHOT_EXECUTION_AUTHORIZATION_REQUEST_V1`. Its token is SHA-256 over the listed request fields other than `authorization-token-sha256`, rendered in the verifier's fixed field order as UTF-8 `key=value` lines with LF endings and a final LF. The token binds the exact three report hashes, raw ownership-snapshot hash, exact build and capture identity, UTC authorization window, 256-bit nonce, one-use count and all no-write/no-launch policy fields.
+
+The verifier requires the capture to be no more than 300 seconds old at the explicitly supplied evaluation time, the authorization start to follow the capture, a positive window no longer than 300 seconds, and evaluation inside that window. It rejects malformed time, changed upstream bytes, duplicate request fields, a non-canonical token, more than one use, unsafe policy claims, malformed/duplicate ledger entries and any token already recorded in the supplied `IZZOS_M7_USED_ONE_SHOT_TOKEN_LEDGER_V1` ledger.
+
+A fresh unused candidate is classified:
+
+```text
+M7_FRESH_ONE_SHOT_EXECUTION_TOKEN_READY_ATOMIC_CONSUMPTION_REQUIRED
+```
+
+This is deliberately readiness evidence rather than execution permission. The verifier neither authenticates the self-reported capture or declared project-owner authority nor writes the ledger. An independent authority must authenticate both and atomically record the token as used before any separately authorized wrapper invocation; otherwise concurrent checks could replay it. Wrapper execution, DSC/FDF promotion, container construction, payload launch and every device command remain unauthorized.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
