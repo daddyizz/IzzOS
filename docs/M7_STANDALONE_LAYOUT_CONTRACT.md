@@ -571,6 +571,30 @@ M7_SEC_PREPI_WRAPPER_EXECUTION_ASSERTION_SCHEMA_PASS_ROUTE_AUTHENTICITY_REQUIRED
 
 This status remains self-reported. The verifier does not inspect the artifact's code semantics, authorize the execution route, establish final runtime-destination ownership, prove that execution occurred, or permit wrapper implementation/integration. DSC/FDF promotion, container construction and launch remain blocked.
 
+## Final runtime-destination ownership gate
+
+Mathematical gaps in the static Cape reserved-memory map are not safe placement evidence. A future exact-device snapshot must enumerate physical-memory ranges and exclusions for fixed and dynamic reserved memory, bootloader relocation, kernel, selected DTB, vendor ramdisk and framebuffer. Bind that snapshot to the exact wrapper assertion, FD capacity report, selected-DTB report and FD bytes:
+
+```bash
+python3 scripts/verify-m7-runtime-destination-ownership.py \
+  out/m7-sec-prepi-wrapper-execution.txt \
+  out/m7-fd-capacity.txt \
+  out/m7-selected-dtb.txt \
+  out/ovaltine-standalone/Ovaltine.fd \
+  out/m7-runtime-ownership-snapshot.txt \
+  out/m7-runtime-destination-ownership.txt
+```
+
+The verifier reproduces 64-bit range arithmetic host-side. It requires the FD, temporary RAM and stack to lie inside declared physical memory; the SEC/PrePi entrypoint to lie inside the FD; the stack to lie inside temporary RAM; and the preserved DTB address to lie inside the declared DTB exclusion. FD and temporary RAM must not overlap each other or any declared exclusion. Changed FD/report bytes, malformed or overlapping physical ranges, incomplete exclusion categories, duplicate fields, unresolved dynamic pools, an out-of-range entry/stack, or any write/launch claim fail closed.
+
+A clear declared snapshot is classified:
+
+```text
+M7_RUNTIME_DESTINATION_OWNERSHIP_SCHEMA_PASS_AUTHENTICITY_FRESHNESS_REQUIRED
+```
+
+This result is deliberately limited to one self-reported capture instant. Runtime allocation ownership can change, so the snapshot must be independently authenticated and fresh at any separately authorized execution. It does not select a persistent PCD, authorize wrapper execution, promote DSC/FDF files, construct a container or authorize launch.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:

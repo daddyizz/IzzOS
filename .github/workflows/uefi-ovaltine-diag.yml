@@ -141,6 +141,9 @@ jobs:
       - name: Test M7 SEC/PrePi wrapper execution assertion schema
         run: bash scripts/test-verify-m7-sec-prepi-wrapper-execution.sh
 
+      - name: Test M7 final runtime-destination ownership gate
+        run: bash scripts/test-verify-m7-runtime-destination-ownership.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 
