@@ -819,6 +819,44 @@ M7_RECOVERED_CHECKPOINT_REPUBLICATION_QUORUM_PASS_EXTERNAL_DISTRIBUTION_REQUIRED
 
 This result proves quorum over the supplied record only. It cannot discover a newer checkpoint that was withheld, prove durable external distribution or authorize device activity. Independent distribution and monitoring remain operational responsibilities; no device command, key write, wrapper execution, promotion, container construction or launch is performed.
 
+## Recovered-checkpoint external-distribution gate
+
+Validate signed observations of the exact recovered checkpoint from three replacement-root-pinned external distribution channels, without contacting a network or changing repository or device trust state:
+
+```bash
+python3 scripts/verify-m7-recovered-checkpoint-external-distribution.py \
+  out/m7-recovered-checkpoint-republication-verification.txt \
+  out/m7-recovered-checkpoint-republication.txt \
+  out/m7-governance-root-recovery-checkpoint.txt \
+  out/m7-replacement-governance-root-manifest.txt \
+  out/m7-replacement-governance-root-public-key.pem \
+  out/m7-recovered-checkpoint-external-distribution-policy.txt \
+  out/m7-replacement-root-distribution-policy-signature.bin \
+  out/m7-distribution-channel-1-public-key.pem \
+  out/m7-distribution-channel-1-receipt.txt \
+  out/m7-distribution-channel-1-receipt-signature.bin \
+  out/m7-distribution-channel-2-public-key.pem \
+  out/m7-distribution-channel-2-receipt.txt \
+  out/m7-distribution-channel-2-receipt-signature.bin \
+  out/m7-distribution-channel-3-public-key.pem \
+  out/m7-distribution-channel-3-receipt.txt \
+  out/m7-distribution-channel-3-receipt-signature.bin \
+  2026-08-25T00:09:00Z \
+  out/m7-recovered-checkpoint-external-distribution-verification.txt
+```
+
+Canonical schema `IZZOS_M7_RECOVERED_CHECKPOINT_EXTERNAL_DISTRIBUTION_POLICY_V1` is signed by the replacement root and binds the exact passing republication report, republication record, recovered checkpoint, epoch/sequence and three distinct HTTPS channels. Each channel has a different operator identifier, origin host and Ed25519 key pin.
+
+Each channel signs its own canonical `IZZOS_M7_RECOVERED_CHECKPOINT_EXTERNAL_DISTRIBUTION_RECEIPT_V1` receipt. All three receipts must bind the same policy and checkpoint, report exact SHA-256 availability, arrive within 3600 seconds of republication and be no more than 3600 seconds old at verification. A stale or delayed receipt, repeated channel identity, unpinned key, rogue signature, changed checkpoint, duplicate field or signed write/launch claim fails closed.
+
+A consistent supplied three-channel distribution set is classified:
+
+```text
+M7_RECOVERED_CHECKPOINT_EXTERNAL_DISTRIBUTION_PASS_CONTINUOUS_MONITORING_REQUIRED
+```
+
+This result validates signed one-shot observations only. It performs no network request and cannot prove continuous availability or discover a newer checkpoint withheld from all supplied channels. Continuous independent monitoring remains a separate gate; no device command, key write, wrapper execution, promotion, container construction or launch is authorized.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:

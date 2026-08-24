@@ -165,6 +165,9 @@ jobs:
       - name: Test M7 recovered-checkpoint republication quorum gate
         run: bash scripts/test-verify-m7-recovered-checkpoint-republication.sh
 
+      - name: Test M7 recovered-checkpoint external-distribution gate
+        run: bash scripts/test-verify-m7-recovered-checkpoint-external-distribution.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 
