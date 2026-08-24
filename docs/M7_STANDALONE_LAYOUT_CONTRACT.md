@@ -279,6 +279,25 @@ M7_AARCH64_CROSS_CORE_REGISTER_CONSISTENCY_PASS
 
 The classification validates topology coverage and the four represented register states only. It does not independently attest the snapshot or prove coherency-domain membership, Secure EL3 state, capture-route safety, wrapper execution, DSC/FDF promotion, MMIO or launch.
 
+## Coherency-domain and secondary-CPU assertion schema gate
+
+Bind a future implementation-defined firmware assertion to the exact cross-core register report:
+
+```bash
+python3 scripts/verify-m7-coherency-secondary-state.py \
+  out/m7-aarch64-cross-core-registers.txt \
+  out/m7-coherency-secondary-state-raw.txt \
+  out/m7-coherency-secondary-state.txt
+```
+
+Schema `IZZOS_M7_COHERENCY_SECONDARY_STATE_V1` requires one canonical record per bound CPU affinity, exactly one primary matching the primary snapshot, one opaque firmware domain token, maintenance-broadcast assertions on every CPU, and secondary CPUs parked or not released without running the payload. It also rejects any assertion that a secondary release, coherency configuration, or maintenance operation was performed during collection. A structurally complete result is:
+
+```text
+M7_COHERENCY_SECONDARY_STATE_ASSERTION_SCHEMA_PASS
+```
+
+The upstream [AArch64 Linux boot contract](https://www.kernel.org/doc/html/latest/arch/arm64/booting.html) explicitly allows coherency enablement to require implementation-defined initialization. Therefore this gate intentionally validates assertion structure only: the opaque domain token and broadcast state remain self-reported, not register-attested proof. Capture-route authorization, the exact Qualcomm coherency mechanism, Secure EL3 state, wrapper implementation, DSC/FDF promotion, MMIO and launch remain blocked.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
@@ -286,7 +305,7 @@ The following remain separate evidence gates:
 - actual FD size and alignment from a concrete SEC/PEI/DXE composition;
 - final runtime destination and FD base, plus exact Qualcomm FD-for-kernel replacement/relocation behavior beyond the bounded stock Linux arithmetic;
 - independently authenticated Qualcomm entry observation and capture route beyond the schema-only snapshot gate;
-- Secure EL3 extension-state evidence for an EL2 entry, coherency-domain evidence and verified execution of the required SEC/PrePi wrapper beyond the bounded cross-core register assessment;
+- Secure EL3 extension-state evidence for an EL2 entry, independently validated Qualcomm coherency-mechanism evidence and verified execution of the required SEC/PrePi wrapper beyond the bounded assertion schema;
 - runtime GIC/timer/platform-init ownership and exception-level requirements beyond the bounded static-DTB enumeration;
 - exact temporary Android boot-container construction only after the input-binding gate and Qualcomm semantics both pass;
 - recovery and exact-device route authorization.

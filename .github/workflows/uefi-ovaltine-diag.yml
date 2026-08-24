@@ -99,6 +99,9 @@ jobs:
       - name: Test M7 AArch64 cross-core register consistency gate
         run: bash scripts/test-verify-m7-aarch64-cross-core-registers.sh
 
+      - name: Test M7 coherency-domain and secondary-CPU assertion schema gate
+        run: bash scripts/test-verify-m7-coherency-secondary-state.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 
