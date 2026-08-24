@@ -111,6 +111,9 @@ jobs:
       - name: Test M7 SMCCC EL3 feature-availability route gate
         run: bash scripts/test-verify-m7-smccc-el3-feature-availability.sh
 
+      - name: Test M7 SMCCC feature-availability collector contract
+        run: bash scripts/test-m7-smccc-feature-availability-collector.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 

@@ -360,6 +360,24 @@ M7_SMCCC_EL3_FEATURE_AVAILABILITY_CORROBORATION_PASS
 
 If discovery returns `NOT_SUPPORTED`, the required safe result is `M7_SMCCC_EL3_FEATURE_AVAILABILITY_ROUTE_UNSUPPORTED`; no register query may then be issued. This is a valid capability finding, not permission to fall back to vendor/SiP calls or direct EL3 reads. The service deliberately reports normalized extension enablement rather than raw EL3 state, and omits the base `NS/RW/HCE/FIQ`, GIC, coherency and cross-CPU properties. Both outcomes therefore leave independent authenticity, complete Secure EL3 compliance, wrapper implementation, MMIO and launch unproven.
 
+## Non-integrated SMCCC collector contract
+
+`M7SmcccFeatureAvailabilityCollector` is a bounded library prototype for a future pre-SEC non-secure EL2 capture path. It is intentionally absent from `OvaltineDiag.dsc` and `OvaltineDiag.inf`: the current UEFI application does not establish the required caller exception/security state.
+
+Before issuing any call, the collector requires explicit route authorization and a declared non-secure EL2 caller. It then enforces this fixed sequence:
+
+1. `SMCCC_VERSION`; stop if unavailable or older than 1.1.
+2. `SMCCC_ARCH_FEATURES` for `0xC0000003`; stop if unsupported or any error is returned.
+3. Exactly three `SMCCC_ARCH_FEATURE_AVAILABILITY` queries, in canonical `SCR_EL3`, `CPTR_EL3`, `MDCR_EL3` order; stop on the first error.
+
+The maximum is five SMC calls. FIDs and register opcodes are compile-time constants, not caller-supplied values. The separate AArch64 transport contains one `smc #0` instruction and no EL3 register access. Host tests inject a fake transport, so tests execute no SMC. A static source gate also rejects MMIO/storage/launch operations and any accidental integration into the current diagnostic build:
+
+```text
+M7_SMCCC_COLLECTOR_SOURCE_CONTRACT_PASS
+```
+
+The prototype is not device-route authorization. Its real transport must not be linked or invoked until a separate gate proves the exact pre-SEC non-secure EL2 route, recovery context and capture-output binding.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
@@ -367,7 +385,7 @@ The following remain separate evidence gates:
 - actual FD size and alignment from a concrete SEC/PEI/DXE composition;
 - final runtime destination and FD base, plus exact Qualcomm FD-for-kernel replacement/relocation behavior beyond the bounded stock Linux arithmetic;
 - independently authenticated Qualcomm entry observation and capture route beyond the schema-only snapshot gate;
-- independently authenticated EL3-owned handoff evidence beyond the self-reported schema and optional sanitized SMCCC corroboration, the exact Qualcomm EL3/internal coherency implementation beyond the public PSCI/SMC boundary, and verified execution of the required SEC/PrePi wrapper;
+- an authorized exact pre-SEC non-secure EL2 route for the non-integrated collector, independently authenticated EL3-owned handoff evidence beyond the self-reported schema and optional sanitized SMCCC corroboration, the exact Qualcomm EL3/internal coherency implementation beyond the public PSCI/SMC boundary, and verified execution of the required SEC/PrePi wrapper;
 - runtime GIC/timer/platform-init ownership and exception-level requirements beyond the bounded static-DTB enumeration;
 - exact temporary Android boot-container construction only after the input-binding gate and Qualcomm semantics both pass;
 - recovery and exact-device route authorization.
