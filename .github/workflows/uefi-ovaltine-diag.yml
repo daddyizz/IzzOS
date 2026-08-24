@@ -135,6 +135,9 @@ jobs:
       - name: Test M7 standalone host-readiness audit
         run: bash scripts/test-report-m7-standalone-readiness.sh
 
+      - name: Test M7 device-promotion evidence audit
+        run: bash scripts/test-report-m7-device-promotion-readiness.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 

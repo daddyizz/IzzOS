@@ -525,6 +525,28 @@ M7_HOST_CONTRACT_CHAIN_COMPLETE_DEVICE_EVIDENCE_REQUIRED
 
 This status explicitly records that the product roadmap remains at `M1 — Non-Destructive UEFI Diagnostic Payload` while the internal engineering sequence is at M7. It still requires independently authenticated exact-device evidence and verified SEC/PrePi wrapper execution; DSC/FDF promotion, Android container construction and device launch remain blocked.
 
+## Exact-device and recovery promotion audit
+
+After the separate ADB and classic bootloader-fastboot captures have been merged, and exact-build recovery evidence passes the M2 recovery gate, bind those inputs to the host-readiness report offline:
+
+```bash
+python3 scripts/report-m7-device-promotion-readiness.py \
+  out/m7-standalone-readiness.txt \
+  out/m1-exact-device-evidence/M1_EXACT_DEVICE_EVIDENCE.txt \
+  out/m2-recovery-evidence.txt \
+  out/m7-device-promotion-readiness.txt
+```
+
+The audit requires the exact OnePlus 10T target and OxygenOS build, classic bootloader-fastboot, unlocked state, matching A/B slot, verified exact-stock recovery images, a verified hard-recovery status, and a route requiring neither persistent writes nor slot changes. It records the SHA-256 identity of all three inputs and fails closed on missing, duplicate, contradictory or unsafe fields.
+
+A consistent chain is classified:
+
+```text
+M7_DEVICE_RECOVERY_EVIDENCE_CHAIN_BOUND_WRAPPER_EXECUTION_REQUIRED
+```
+
+This means only that the supplied files are internally consistent and their exact bytes are bound by the report. It does not cryptographically attest who collected them. Independent capture authenticity and actual SEC/PrePi wrapper execution remain blockers; DSC/FDF promotion, container construction and every device command remain unauthorized.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
