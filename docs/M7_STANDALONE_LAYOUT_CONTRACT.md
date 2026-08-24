@@ -710,6 +710,43 @@ M7_KEY_ROTATION_GOVERNANCE_PASS_CHECKPOINT_DISTRIBUTION_REQUIRED
 
 The verifier cannot discover whether a newer checkpoint exists elsewhere. Anti-rollback therefore still depends on distributing the latest repository-reviewed checkpoint and protecting the offline governance-root custody/recovery process. This gate performs no key or device write and does not authorize wrapper execution, promotion, container construction or launch.
 
+## Checkpoint publication quorum and governance-root recovery policy
+
+Require the currently pinned governance root and at least two of three independent publication witnesses to sign the exact same short-lived checkpoint publication and recovery-policy bytes:
+
+```bash
+python3 scripts/verify-m7-checkpoint-publication-root-recovery.py \
+  out/m7-key-rotation-governance-verification.txt \
+  out/m7-key-governance-anti-rollback-checkpoint.txt \
+  out/m7-key-governance-root-manifest.txt \
+  out/m7-key-governance-root-public-key.pem \
+  out/m7-checkpoint-publication-root-recovery-policy.txt \
+  out/m7-publication-witness-1-public-key.pem \
+  out/m7-publication-witness-1-signature.bin \
+  out/m7-publication-witness-2-public-key.pem \
+  out/m7-publication-witness-2-signature.bin \
+  out/m7-publication-witness-3-public-key.pem \
+  out/m7-publication-witness-3-signature.bin \
+  out/m7-recovery-custodian-1-public-key.pem \
+  out/m7-recovery-custodian-2-public-key.pem \
+  out/m7-recovery-custodian-3-public-key.pem \
+  out/m7-governance-root-policy-signature.bin \
+  2026-08-25T00:04:00Z \
+  out/m7-checkpoint-publication-root-recovery-verification.txt
+```
+
+Canonical schema `IZZOS_M7_CHECKPOINT_PUBLICATION_AND_ROOT_RECOVERY_POLICY_V1` binds the exact passing key-governance report and checkpoint bytes, their epoch/sequence, a publication window of at most 900 seconds, three distinct Ed25519 witness keys, a two-of-three publication threshold, the currently pinned governance root and three distinct recovery-custodian keys. Every governance-root, witness and recovery public key must be distinct. The root signs the complete policy, and at least two pinned witnesses must independently sign those exact same bytes.
+
+The recovery portion is policy only. It pins a future two-of-three custodian requirement for a new root manifest and requires the previous root to be revoked before replacement activation. It neither proves possession of the recovery private keys nor accepts or executes a recovery event. Changed checkpoint/report bytes, expired publication, fewer than two valid witness signatures, a rogue root signature, duplicate fields, reused keys or any root-and-quorum-signed write/launch claim fail closed.
+
+A consistent fresh supplied quorum is classified:
+
+```text
+M7_CHECKPOINT_PUBLICATION_QUORUM_ROOT_RECOVERY_POLICY_PASS_EXTERNAL_DISTRIBUTION_REQUIRED
+```
+
+The verifier still cannot discover a newer checkpoint that was never supplied to it. External distribution diversity, witness availability, private-key custody and any future root-recovery event remain separate operational responsibilities. This gate performs no device command, key write, recovery activation, wrapper execution, promotion, container construction or launch.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:

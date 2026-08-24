@@ -71,6 +71,8 @@ The first successful on-device goal is a temporary diagnostic launch that proves
 16. **M15 — Release Candidate**
 17. **M16 — IzzOS 1.0 Final**
 
+M8 is a separable GPU track and may be paused after M7 while M9A validates non-GPU Windows compatibility. GPU-dependent M9B, hardware-accelerated workloads, M12 gaming validation and the corresponding final-release claims remain blocked until M8 is resumed and passes.
+
 ## Safety Rules
 
 Until the relevant platform stages are validated:
