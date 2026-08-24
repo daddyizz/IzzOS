@@ -650,6 +650,33 @@ M7_TOKEN_CONSUMPTION_RESULT_SCHEMA_PASS_ATOMICITY_AUTHENTICITY_REQUIRED
 
 Exact before/after bytes prove only the declared ledger transition, not that the external compare-and-append was atomic. Both atomicity and execution remain self-reported and not independently attested. This gate performs no ledger write or device command, cannot retroactively authorize an invocation, and does not permit DSC/FDF promotion, container construction or payload launch.
 
+## Independent authority-attestation signature gate
+
+Replace an unsigned self-report with a detached Ed25519 endorsement whose exact public key is pinned by a repository-reviewed manifest:
+
+```bash
+python3 scripts/verify-m7-authority-attestation.py \
+  out/m7-token-consumption-execution-result-verification.txt \
+  out/m7-trusted-authority-key-manifest.txt \
+  out/m7-authority-public-key.pem \
+  out/m7-authority-attestation-envelope.txt \
+  out/m7-authority-attestation-signature.bin \
+  2026-08-25T00:01:05Z \
+  out/m7-authority-attestation-verification.txt
+```
+
+`IZZOS_M7_TRUSTED_AUTHORITY_KEY_V1` pins the SHA-256 of one Ed25519 public-key file, exact authority role and scope, a validity period of at most 366 days, repository trust-anchor source, external key custody and no-write/no-launch policy. The verifier rejects an unpinned or non-Ed25519 key, expired or declared-revoked key, duplicate or non-canonical manifest and verification outside the validity window.
+
+The signed canonical `IZZOS_M7_AUTHORITY_ATTESTATION_ENVELOPE_V1` binds the complete token-consumption/result verification report, token, receipt, evidence-artifact digest, exact build and capture identity. It can endorse capture authenticity, atomic token consumption, wrapper-result authenticity and device-route authenticity only within the narrow bound-evidence scope. Attestation must follow the bound result and precede verification. Any changed byte, wrong key, truncated signature, duplicate field, altered upstream report or signed SMC/MMIO/write/launch claim fails closed. Signature verification uses OpenSSL `pkeyutl` with `-rawin`; tests create temporary Ed25519 keys and retain no private key.
+
+A cryptographically valid endorsement is classified:
+
+```text
+M7_AUTHORITY_ATTESTATION_SIGNATURE_PASS_KEY_GOVERNANCE_REQUIRED
+```
+
+This proves that the holder of the pinned private key endorsed the exact envelope bytes. It does not prove private-key custody, revocation handling or physical-device truth to the verifier, retroactively authorize an execution route, or permit DSC/FDF promotion, container construction or payload launch.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:

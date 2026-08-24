@@ -245,6 +245,8 @@ lines = [
     f"execution-evidence-artifact-size: {EVIDENCE_ARTIFACT.stat().st_size}",
     f"execution-result-sha256: {result_hash}",
     f"authorization-token-sha256: {authorization_token or 'MISSING'}",
+    f"exact-device-build: {field(result, 'exact-device-build') or 'MISSING'}",
+    f"capture-id: {field(result, 'capture-id') or 'MISSING'}",
     f"consumption-id: {field(receipt, 'consumption-id') or 'MISSING'}",
     f"execution-id: {field(result, 'execution-id') or 'MISSING'}",
     f"consumed-at-utc: {field(receipt, 'consumed-at-utc') or 'MISSING'}",

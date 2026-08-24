@@ -150,6 +150,9 @@ jobs:
       - name: Test M7 token-consumption receipt and execution-result binding gate
         run: bash scripts/test-verify-m7-token-consumption-execution-result.sh
 
+      - name: Test M7 independent authority-attestation signature gate
+        run: bash scripts/test-verify-m7-authority-attestation.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 

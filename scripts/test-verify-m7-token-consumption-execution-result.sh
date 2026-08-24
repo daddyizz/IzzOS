@@ -121,6 +121,8 @@ run_verify "$TMP/pass.txt" >/dev/null
 grep -q '^post-use-ledger-is-exact-single-token-append: PASS$' "$TMP/pass.txt"
 grep -q '^consumption-receipt-binds-readiness-request-and-ledgers: PASS$' "$TMP/pass.txt"
 grep -q '^execution-result-binds-receipt-readiness-request-and-token: PASS$' "$TMP/pass.txt"
+grep -q '^exact-device-build: CPH2413_15.0.0.1901(EX01)$' "$TMP/pass.txt"
+grep -q '^capture-id: CPH2413-EX01-runtime-ownership-test$' "$TMP/pass.txt"
 grep -q '^wrapper-execution-authorization: NO$' "$TMP/pass.txt"
 grep -q '^classification: M7_TOKEN_CONSUMPTION_RESULT_SCHEMA_PASS_ATOMICITY_AUTHENTICITY_REQUIRED$' "$TMP/pass.txt"
 
