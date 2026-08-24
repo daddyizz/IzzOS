@@ -9,6 +9,7 @@ on:
       - 'scripts/**'
       - 'docs/M1_CURRENT_PAYLOAD.txt'
       - 'docs/M1_STANDALONE_FIRMWARE_BRINGUP.md'
+      - 'docs/M7_STANDALONE_LAYOUT_CONTRACT.md'
       - '.github/workflows/uefi-ovaltine-diag.yml'
   pull_request:
     paths:
@@ -16,6 +17,7 @@ on:
       - 'scripts/**'
       - 'docs/M1_CURRENT_PAYLOAD.txt'
       - 'docs/M1_STANDALONE_FIRMWARE_BRINGUP.md'
+      - 'docs/M7_STANDALONE_LAYOUT_CONTRACT.md'
       - '.github/workflows/uefi-ovaltine-diag.yml'
 
 jobs:
@@ -57,6 +59,12 @@ jobs:
 
       - name: Test exact-stock AArch64 kernel header analyzer
         run: bash scripts/test-analyze-stock-aarch64-kernel-header.sh
+
+      - name: Test M6 exact stock kernel-region geometry verifier
+        run: bash scripts/test-verify-m1-kernel-region-geometry.sh
+
+      - name: Test M7 standalone layout region contract
+        run: bash scripts/test-check-m7-layout-contract.sh
 
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
