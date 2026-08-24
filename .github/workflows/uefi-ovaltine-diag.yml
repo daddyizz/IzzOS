@@ -108,6 +108,9 @@ jobs:
       - name: Test M7 Secure EL3 handoff-state assertion schema gate
         run: bash scripts/test-verify-m7-secure-el3-handoff-state.sh
 
+      - name: Test M7 SMCCC EL3 feature-availability route gate
+        run: bash scripts/test-verify-m7-smccc-el3-feature-availability.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 

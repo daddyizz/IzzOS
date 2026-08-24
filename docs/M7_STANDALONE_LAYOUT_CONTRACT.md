@@ -339,6 +339,27 @@ M7_SECURE_EL3_HANDOFF_ASSERTION_SCHEMA_PASS
 
 This remains a schema-only result. The record is self-reported, its capture route is not independently authorized, and feature controls absent from the current inventory are not assessed. It does not prove Secure EL3 compliance or authorize secure-monitor changes, wrapper implementation, DSC/FDF promotion, MMIO, or launch.
 
+## SMCCC EL3 feature-availability route gate
+
+Validate a future read-only Arm Architecture Service capture against the exact Secure EL3 handoff assertion:
+
+```bash
+python3 scripts/verify-m7-smccc-el3-feature-availability.py \
+  out/m7-secure-el3-handoff-state.txt \
+  out/m7-smccc-el3-feature-availability-raw.txt \
+  out/m7-smccc-el3-feature-availability.txt
+```
+
+Schema `IZZOS_M7_SMCCC_EL3_FEATURE_AVAILABILITY_V1` permits only `SMCCC_VERSION` (`0x80000000`), `SMCCC_ARCH_FEATURES` (`0x80000001`), and the SMC64 `SMCCC_ARCH_FEATURE_AVAILABILITY` function (`0xC0000003`) under Arm Architecture Service owner zero. The exact register opcodes are pinned to `SCR_EL3`, `CPTR_EL3`, and `MDCR_EL3`. This follows the upstream [TF-A Arm Architecture Service implementation](https://github.com/ARM-software/arm-trusted-firmware/blob/master/services/arm_arch_svc/arm_arch_svc_setup.c) and its [identifier/mask definitions](https://github.com/ARM-software/arm-trusted-firmware/blob/master/include/services/arm_arch_svc.h).
+
+If discovery succeeds, the gate checks the returned sanitized availability masks against only the applicable FP/SIMD, pointer-authentication, MTE, SVE, and SME claims. A complete result is:
+
+```text
+M7_SMCCC_EL3_FEATURE_AVAILABILITY_CORROBORATION_PASS
+```
+
+If discovery returns `NOT_SUPPORTED`, the required safe result is `M7_SMCCC_EL3_FEATURE_AVAILABILITY_ROUTE_UNSUPPORTED`; no register query may then be issued. This is a valid capability finding, not permission to fall back to vendor/SiP calls or direct EL3 reads. The service deliberately reports normalized extension enablement rather than raw EL3 state, and omits the base `NS/RW/HCE/FIQ`, GIC, coherency and cross-CPU properties. Both outcomes therefore leave independent authenticity, complete Secure EL3 compliance, wrapper implementation, MMIO and launch unproven.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
@@ -346,7 +367,7 @@ The following remain separate evidence gates:
 - actual FD size and alignment from a concrete SEC/PEI/DXE composition;
 - final runtime destination and FD base, plus exact Qualcomm FD-for-kernel replacement/relocation behavior beyond the bounded stock Linux arithmetic;
 - independently authenticated Qualcomm entry observation and capture route beyond the schema-only snapshot gate;
-- independently authenticated EL3-owned handoff evidence beyond the self-reported schema, the exact Qualcomm EL3/internal coherency implementation beyond the public PSCI/SMC boundary, and verified execution of the required SEC/PrePi wrapper;
+- independently authenticated EL3-owned handoff evidence beyond the self-reported schema and optional sanitized SMCCC corroboration, the exact Qualcomm EL3/internal coherency implementation beyond the public PSCI/SMC boundary, and verified execution of the required SEC/PrePi wrapper;
 - runtime GIC/timer/platform-init ownership and exception-level requirements beyond the bounded static-DTB enumeration;
 - exact temporary Android boot-container construction only after the input-binding gate and Qualcomm semantics both pass;
 - recovery and exact-device route authorization.
