@@ -28,6 +28,6 @@ run_case() {
 
 run_case "$ROOT/match.txt" MATCHES_SOURCE_EXPECTATION
 run_case "$ROOT/mismatch.txt" MISMATCH_HARD_STOP
-run_case "$ROOT/incomplete.txt" INCOMPLETE_METADATA
+run_case "$ROOT/incomplete.txt" HEADER_V4_CONFIRMED_PAGE_SIZE_UNREPORTED
 
 echo "stock boot metadata analyzer tests: PASS"

@@ -46,7 +46,8 @@ Stock vendor_boot verified: YES
 Stock init_boot verified/NA: NA
 Stock dtbo verified: YES
 Stock vbmeta verified: YES
-Emergency recovery status: DOCUMENTED
+Stock recovery image verified: YES
+Emergency recovery status: SELF_SERVICE_HARD_RECOVERY_VERIFIED
 Temporary route candidate: temporary-chainload-example
 Persistent write required: NO
 Slot change required: NO

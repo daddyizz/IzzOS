@@ -16,7 +16,8 @@ Stock boot image verified: YES
 Stock vendor_boot verified: YES
 Stock dtbo verified: YES
 Stock vbmeta verified: YES
-Emergency recovery status: exact-variant procedure documented
+Stock recovery image verified: YES
+Emergency recovery status: SELF_SERVICE_HARD_RECOVERY_VERIFIED
 Temporary route candidate: temporary-chainload-example
 Persistent write required: NO
 Slot change required: NO
@@ -35,7 +36,8 @@ Stock boot image verified: YES
 Stock vendor_boot verified: YES
 Stock dtbo verified: YES
 Stock vbmeta verified: YES
-Emergency recovery status: exact-variant procedure documented
+Stock recovery image verified: YES
+Emergency recovery status: SELF_SERVICE_HARD_RECOVERY_VERIFIED
 Temporary route candidate: temporary-chainload-example
 Persistent write required: NO
 Slot change required: NO

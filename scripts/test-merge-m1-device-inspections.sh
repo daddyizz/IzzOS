@@ -25,7 +25,7 @@ EOF
   printf 'Classification: %s\n' "$class" > "$dir/ovaltine-inspection-analysis.txt"
 }
 
-make_dir "$TMP_DIR/adb" yes NEED_EXACT_FASTBOOT_INSPECTION CPH2413_15.0.0.1901(EX01) unknown unknown unknown
+make_dir "$TMP_DIR/adb" yes NEED_EXACT_FASTBOOT_INSPECTION 'CPH2413_15.0.0.1901(EX01)' unknown unknown unknown
 make_dir "$TMP_DIR/fastboot" platform-compatible CLASSIC_FASTBOOT_CANDIDATE_UNVERIFIED unknown a yes no
 
 bash "$MERGER" "$TMP_DIR/adb" "$TMP_DIR/fastboot" "$TMP_DIR/out-ok" >/dev/null
@@ -44,7 +44,7 @@ fi
 grep -q '^Classification: M1_EXACT_DEVICE_EVIDENCE_BLOCKED$' "$TMP_DIR/out-target/M1_EXACT_DEVICE_EVIDENCE.txt"
 grep -q '^Blocker: fastboot capture is neither an exact target match nor an accepted platform-compatible observation$' "$TMP_DIR/out-target/M1_EXACT_DEVICE_EVIDENCE.txt"
 
-make_dir "$TMP_DIR/adb-bad" no NEED_EXACT_FASTBOOT_INSPECTION CPH2413_15.0.0.1901(EX01) unknown unknown unknown
+make_dir "$TMP_DIR/adb-bad" no NEED_EXACT_FASTBOOT_INSPECTION 'CPH2413_15.0.0.1901(EX01)' unknown unknown unknown
 if bash "$MERGER" "$TMP_DIR/adb-bad" "$TMP_DIR/fastboot" "$TMP_DIR/out-adb-bad" >/dev/null 2>&1; then
   echo "ERROR: platform-compatible fastboot evidence must not override a failed ADB identity" >&2
   exit 1

@@ -51,7 +51,8 @@ Stock boot image verified: YES
 Stock vendor_boot verified: YES
 Stock dtbo verified: YES
 Stock vbmeta verified: YES
-Emergency recovery status: DOCUMENTED
+Stock recovery image verified: YES
+Emergency recovery status: SELF_SERVICE_HARD_RECOVERY_VERIFIED
 Temporary route candidate: OEM_UEFI_CHAINLOAD
 Persistent write required: NO
 Slot change required: NO
