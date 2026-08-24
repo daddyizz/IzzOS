@@ -150,12 +150,37 @@ M7_ANDROID_CONTAINER_INPUTS_BOUND
 
 This classification deliberately does not construct or repack an image. It authorizes no kernel replacement, vendor-boot modification, AVB bypass, fastboot command, persistent write, slot change, or launch. The Qualcomm container replacement/relocation semantics, FD base and route authorization remain separate evidence gates.
 
+## Exact LinuxLoader placement evidence binding
+
+Bind the exact stock AArch64 `LinuxLoader.efi` and its placement analyses to the exact M7 Android input set:
+
+```bash
+python3 scripts/verify-m7-linuxloader-placement-evidence.py \
+  out/m7-android-container-inputs.txt \
+  out/linuxloader/LinuxLoader.efi \
+  out/linuxloader-placement-function.txt \
+  out/linuxloader-bootparam-field-writes.txt \
+  out/linuxloader-size-term-provenance.txt \
+  out/linuxloader-v4-size-term-semantics.txt \
+  output/boot.img \
+  output/vendor_boot.img \
+  out/m7-linuxloader-placement-evidence.txt
+```
+
+The verifier requires all three binary-analysis reports to carry the actual LinuxLoader hash, requires an AArch64 PE32+ image, binds the v4 size semantics to the exact boot/vendor hashes, and checks the source-matched ramdisk/DTB placement formulas and the exact-build dynamic guard. A successful result is:
+
+```text
+M7_EXACT_LINUXLOADER_PLACEMENT_EVIDENCE_BOUND
+```
+
+This binds the stock Linux-kernel placement arithmetic only. It does not prove the final runtime destination or that a standalone FD can replace an AArch64 Linux Image while satisfying Qualcomm entry, relocation, cache/MMU and security-state expectations. FD-base selection, container construction and launch remain unauthorized.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
 
 - actual FD size and alignment from a concrete SEC/PEI/DXE composition;
-- FD base and exact Qualcomm Android-container replacement/relocation behavior derived from boot-chain evidence, not an arbitrary window;
+- final runtime destination and FD base, plus exact Qualcomm FD-for-kernel replacement/relocation behavior beyond the bounded stock Linux arithmetic;
 - observed Qualcomm entry EL/system-register state and a standalone SEC entry contract beyond the enumerated stock Linux handoff;
 - runtime GIC/timer/platform-init ownership and exception-level requirements beyond the bounded static-DTB enumeration;
 - exact temporary Android boot-container construction only after the input-binding gate and Qualcomm semantics both pass;

@@ -81,6 +81,9 @@ jobs:
       - name: Test M7 exact Android container input binding
         run: bash scripts/test-verify-m7-android-container-inputs.sh
 
+      - name: Test M7 exact LinuxLoader placement evidence binding
+        run: bash scripts/test-verify-m7-linuxloader-placement-evidence.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 
