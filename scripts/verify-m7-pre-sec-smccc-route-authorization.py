@@ -100,6 +100,7 @@ input_hashes = {
     "recovery-evidence-sha256": sha256(RECOVERY),
 }
 component_hashes = {label: sha256(path) for label, path in COMPONENTS.items()}
+route_evidence_hash = sha256(ROUTE)
 
 route_fields = [
     "route-authorization-schema",
@@ -217,6 +218,17 @@ for label, expected_hash in component_hashes.items():
     checks.append((f"route-{label}-matches", equal_hash(field(route, label), expected_hash)))
 
 failed = [name for name, passed in checks if not passed]
+binding_lines = [
+    "authorization-binding-schema: IZZOS_M7_PRE_SEC_SMCCC_AUTHORIZATION_BINDING_V1",
+    *[f"{label}: {value}" for label, value in input_hashes.items()],
+    *[f"{label}: {value}" for label, value in component_hashes.items()],
+    f"route-evidence-sha256: {route_evidence_hash}",
+    f"route-candidate: {route_candidate or 'MISSING'}",
+    f"output-buffer-address: {field(route, 'output-buffer-address') or 'MISSING'}",
+    f"output-buffer-capacity: {field(route, 'output-buffer-capacity') or 'MISSING'}",
+    f"output-buffer-alignment: {field(route, 'output-buffer-alignment') or 'MISSING'}",
+]
+authorization_binding_hash = hashlib.sha256(("\n".join(binding_lines) + "\n").encode()).hexdigest()
 lines = [
     "IzzOS Milestone 7 pre-SEC SMCCC collector route authorization gate",
     "Verifier mode: HOST_SIDE_FAIL_CLOSED_EVIDENCE_BINDING",
@@ -227,7 +239,9 @@ lines = [
     "",
     *[f"{label}: {value}" for label, value in input_hashes.items()],
     *[f"{label}: {value}" for label, value in component_hashes.items()],
-    f"route-evidence-sha256: {sha256(ROUTE)}",
+    f"route-evidence-sha256: {route_evidence_hash}",
+    "authorization-binding-schema: IZZOS_M7_PRE_SEC_SMCCC_AUTHORIZATION_BINDING_V1",
+    f"authorization-binding-sha256: {authorization_binding_hash}",
     f"exact-device-build: {TARGET_BUILD}",
     f"route-candidate: {route_candidate or 'MISSING'}",
     f"recovery-emergency-status: {recovery_emergency or 'MISSING'}",

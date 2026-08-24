@@ -115,6 +115,8 @@ grep -q '^collector-invocation-is-exactly-once: PASS$' "$TMP/pass.txt"
 grep -q '^output-buffer-alignment-is-safe: PASS$' "$TMP/pass.txt"
 grep -q '^route-forbids-vendor-or-sip-smc: PASS$' "$TMP/pass.txt"
 grep -q '^collector-invocation-authorization: EXACTLY_ONCE_FOR_BOUND_CAPTURE_ONLY$' "$TMP/pass.txt"
+grep -q '^authorization-binding-schema: IZZOS_M7_PRE_SEC_SMCCC_AUTHORIZATION_BINDING_V1$' "$TMP/pass.txt"
+grep -Eq '^authorization-binding-sha256: [0-9a-f]{64}$' "$TMP/pass.txt"
 grep -q '^payload-launch-authorization: NO$' "$TMP/pass.txt"
 grep -q '^classification: M7_PRE_SEC_SMCCC_ROUTE_AUTHORIZATION_PASS$' "$TMP/pass.txt"
 

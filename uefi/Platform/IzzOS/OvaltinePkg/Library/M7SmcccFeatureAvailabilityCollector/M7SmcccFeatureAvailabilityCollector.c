@@ -30,6 +30,100 @@ IsSmcccVersionAtLeastOneOne (
   return Major > 1 || (Major == 1 && Minor >= 1);
 }
 
+static int
+IsZeroDigest (
+  const uint8_t Digest[M7_SMCCC_ROUTE_DIGEST_SIZE]
+  )
+{
+  uint32_t Index;
+  uint8_t Combined;
+
+  Combined = 0;
+  for (Index = 0; Index < M7_SMCCC_ROUTE_DIGEST_SIZE; ++Index) {
+    Combined |= Digest[Index];
+  }
+  return Combined == 0;
+}
+
+static int
+EqualDigest (
+  const uint8_t Left[M7_SMCCC_ROUTE_DIGEST_SIZE],
+  const uint8_t Right[M7_SMCCC_ROUTE_DIGEST_SIZE]
+  )
+{
+  uint32_t Index;
+  uint8_t Difference;
+
+  Difference = 0;
+  for (Index = 0; Index < M7_SMCCC_ROUTE_DIGEST_SIZE; ++Index) {
+    Difference |= (uint8_t)(Left[Index] ^ Right[Index]);
+  }
+  return Difference == 0;
+}
+
+static int
+IsPowerOfTwo (
+  uint64_t Value
+  )
+{
+  return Value != 0 && (Value & (Value - 1)) == 0;
+}
+
+static int
+HasSafeBoundOutputBuffer (
+  const M7_SMCCC_ROUTE_AUTHORIZATION_TOKEN *Token,
+  const M7_SMCCC_ROUTE_AUTHORIZATION_EXPECTATION *Expectation
+  )
+{
+  if (Token->OutputBufferAddress != Expectation->OutputBufferAddress ||
+      Token->OutputBufferCapacity != Expectation->OutputBufferCapacity ||
+      Token->OutputBufferAlignment != Expectation->OutputBufferAlignment) {
+    return 0;
+  }
+  if (Token->OutputBufferAddress == 0 ||
+      Token->OutputBufferCapacity < M7_SMCCC_ROUTE_MIN_BUFFER_CAPACITY ||
+      Token->OutputBufferCapacity > M7_SMCCC_ROUTE_MAX_BUFFER_CAPACITY ||
+      Token->OutputBufferAlignment < M7_SMCCC_ROUTE_MIN_BUFFER_ALIGNMENT ||
+      !IsPowerOfTwo (Token->OutputBufferAlignment) ||
+      Token->OutputBufferAddress % Token->OutputBufferAlignment != 0) {
+    return 0;
+  }
+  return Token->OutputBufferAddress <= UINT64_MAX - Token->OutputBufferCapacity;
+}
+
+static int
+ValidateAndConsumeRouteAuthorization (
+  M7_SMCCC_ROUTE_AUTHORIZATION_TOKEN *Token,
+  const M7_SMCCC_ROUTE_AUTHORIZATION_EXPECTATION *Expectation
+  )
+{
+  if (Token == 0 || Expectation == 0) {
+    return 0;
+  }
+  if (Token->Magic != M7_SMCCC_ROUTE_TOKEN_MAGIC ||
+      Token->FormatVersion != M7_SMCCC_ROUTE_TOKEN_VERSION ||
+      Token->TokenSize != (uint32_t)sizeof (*Token) ||
+      Token->PolicyFlags != M7_SMCCC_ROUTE_REQUIRED_POLICY_FLAGS ||
+      Token->InvocationBudget != 1 ||
+      Token->SmcccCallLimit != M7_SMCCC_MAX_CALLS ||
+      Token->Consumed != 0) {
+    return 0;
+  }
+  if (IsZeroDigest (Token->RouteAuthorizationReportSha256) ||
+      IsZeroDigest (Token->AuthorizationBindingSha256) ||
+      IsZeroDigest (Expectation->RouteAuthorizationReportSha256) ||
+      IsZeroDigest (Expectation->AuthorizationBindingSha256) ||
+      !EqualDigest (Token->RouteAuthorizationReportSha256, Expectation->RouteAuthorizationReportSha256) ||
+      !EqualDigest (Token->AuthorizationBindingSha256, Expectation->AuthorizationBindingSha256) ||
+      !HasSafeBoundOutputBuffer (Token, Expectation)) {
+    return 0;
+  }
+
+  Token->Consumed = 1;
+  Token->InvocationBudget = 0;
+  return 1;
+}
+
 static void
 InitializeCapture (
   M7_SMCCC_CAPTURE *Capture
@@ -69,14 +163,17 @@ M7CollectSmcccFeatureAvailability (
     return Capture->Outcome;
   }
 
-  if (CallerState->RouteIsAuthorized != 1) {
-    Capture->Outcome = M7SmcccCollectorRouteNotAuthorized;
-    return Capture->Outcome;
-  }
-
   if (CallerState->CallerExceptionLevel != M7_SMCCC_EXPECTED_CALLER_EL ||
       CallerState->CallerIsNonSecure != 1) {
     Capture->Outcome = M7SmcccCollectorWrongCallerState;
+    return Capture->Outcome;
+  }
+
+  if (!ValidateAndConsumeRouteAuthorization (
+        CallerState->RouteAuthorizationToken,
+        CallerState->RouteAuthorizationExpectation
+        )) {
+    Capture->Outcome = M7SmcccCollectorRouteNotAuthorized;
     return Capture->Outcome;
   }
 

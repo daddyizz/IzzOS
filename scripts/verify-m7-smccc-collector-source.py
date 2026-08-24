@@ -33,9 +33,18 @@ checks = []
 for name, value in required_defines.items():
     checks.append((f"{name.lower()}-is-exact", bool(re.search(rf"(?m)^#define\s+{name}\s+UINT64_C\({value}\)\s*$", header))))
 
+consume_index = source.find("Token->Consumed = 1;")
+first_call_index = source.find("Invoke (M7_SMCCC_VERSION_FID")
 checks.extend(
     [
-        ("collector-has-explicit-route-authorization-gate", "CallerState->RouteIsAuthorized != 1" in source),
+        ("collector-removes-loose-route-boolean", "RouteIsAuthorized" not in header + source),
+        ("collector-has-bound-route-token-types", "M7_SMCCC_ROUTE_AUTHORIZATION_TOKEN" in header and "M7_SMCCC_ROUTE_AUTHORIZATION_EXPECTATION" in header),
+        ("collector-has-exact-required-policy-flags", "M7_SMCCC_ROUTE_REQUIRED_POLICY_FLAGS" in header and "Token->PolicyFlags != M7_SMCCC_ROUTE_REQUIRED_POLICY_FLAGS" in source),
+        ("collector-binds-route-report-and-evidence-digests", "RouteAuthorizationReportSha256" in header + source and "AuthorizationBindingSha256" in header + source and source.count("EqualDigest (") >= 3),
+        ("collector-binds-safe-output-buffer", "HasSafeBoundOutputBuffer" in source and "M7_SMCCC_ROUTE_MIN_BUFFER_CAPACITY" in source and "M7_SMCCC_ROUTE_MAX_BUFFER_CAPACITY" in source),
+        ("collector-consumes-token-before-first-smc", consume_index >= 0 and first_call_index >= 0 and consume_index < first_call_index),
+        ("collector-zeroes-invocation-budget-on-consume", "Token->InvocationBudget = 0;" in source),
+        ("collector-rejects-token-replay", "Token->Consumed != 0" in source),
         ("collector-has-explicit-nonsecure-el2-gate", "CallerState->CallerExceptionLevel != M7_SMCCC_EXPECTED_CALLER_EL" in source and "CallerState->CallerIsNonSecure != 1" in source),
         ("collector-discovers-before-feature-queries", source.find("Invoke (\n    M7_SMCCC_ARCH_FEATURES_FID") < source.find("Invoke (\n      M7_SMCCC_FEATURE_AVAILABILITY_FID")),
         ("collector-stops-on-version-unavailable", "M7SmcccCollectorVersionUnavailable" in source),
@@ -58,7 +67,7 @@ for name, passed in checks:
     print(f'{name}: {"PASS" if passed else "FAIL"}')
 print()
 print("current-dsc-inf-integration: FORBIDDEN_AND_ABSENT")
-print("device-route-authorization: NOT_PROVEN")
+print("device-route-authorization: BOUND_SINGLE_USE_TOKEN_REQUIRED_NOT_INTEGRATED")
 print("mmio-initialization-authorization: NO")
 print("launch-authorization: NO")
 if failed:

@@ -364,13 +364,13 @@ If discovery returns `NOT_SUPPORTED`, the required safe result is `M7_SMCCC_EL3_
 
 `M7SmcccFeatureAvailabilityCollector` is a bounded library prototype for a future pre-SEC non-secure EL2 capture path. It is intentionally absent from `OvaltineDiag.dsc` and `OvaltineDiag.inf`: the current UEFI application does not establish the required caller exception/security state.
 
-Before issuing any call, the collector requires explicit route authorization and a declared non-secure EL2 caller. It then enforces this fixed sequence:
+Before issuing any call, the collector requires a declared non-secure EL2 caller and a bound single-use route token. The former `RouteIsAuthorized` boolean has been removed. The token carries the exact route-authorization report digest, the deterministic evidence-binding digest, exact non-secure output-buffer geometry, a one-invocation budget, a five-call limit and the complete fixed safety-policy flags. Token values must match a separately provisioned expectation; zero or changed digests, unknown flags, unsafe or mismatched buffers and replay are rejected before the transport can run. A valid token is marked consumed and its budget is cleared before the first call. The collector then enforces this fixed sequence:
 
 1. `SMCCC_VERSION`; stop if unavailable or older than 1.1.
 2. `SMCCC_ARCH_FEATURES` for `0xC0000003`; stop if unsupported or any error is returned.
 3. Exactly three `SMCCC_ARCH_FEATURE_AVAILABILITY` queries, in canonical `SCR_EL3`, `CPTR_EL3`, `MDCR_EL3` order; stop on the first error.
 
-The maximum is five SMC calls. FIDs and register opcodes are compile-time constants, not caller-supplied values. The separate AArch64 transport contains one `smc #0` instruction and no EL3 register access. Host tests inject a fake transport, so tests execute no SMC. A static source gate also rejects MMIO/storage/launch operations and any accidental integration into the current diagnostic build:
+The maximum is five SMC calls. FIDs and register opcodes are compile-time constants, not caller-supplied values. The separate AArch64 transport contains one `smc #0` instruction and no EL3 register access. Host tests inject a fake transport, so tests execute no SMC. They cover null and mismatched tokens, wrong EL, unknown policy flags, buffer mismatch, replay, consumption on terminal outcomes and the canonical supported/unsupported/error paths. A static source gate also rejects MMIO/storage/launch operations and any accidental integration into the current diagnostic build:
 
 ```text
 M7_SMCCC_COLLECTOR_SOURCE_CONTRACT_PASS
@@ -391,7 +391,7 @@ python3 scripts/verify-m7-pre-sec-smccc-route-authorization.py \
   out/m7-pre-sec-smccc-route-authorization.txt
 ```
 
-Schema `IZZOS_M7_PRE_SEC_SMCCC_ROUTE_AUTHORIZATION_V1` fail-closes unless the route binds the exact SEC requirement and Qualcomm entry-observation reports, verified hard-recovery evidence, collector/transport/emitter source identities, and one aligned non-secure pre-SEC output buffer. The observed entry must be non-secure EL2 on the primary CPU. The route permits exactly one collector invocation, caps the Arm Architecture Service sequence at five calls, and fixes the allowed functions to `SMCCC_VERSION`, `SMCCC_ARCH_FEATURES`, and `SMCCC_ARCH_FEATURE_AVAILABILITY`.
+Schema `IZZOS_M7_PRE_SEC_SMCCC_ROUTE_AUTHORIZATION_V1` fail-closes unless the route binds the exact SEC requirement and Qualcomm entry-observation reports, verified hard-recovery evidence, collector/transport/emitter source identities, and one aligned non-secure pre-SEC output buffer. The observed entry must be non-secure EL2 on the primary CPU. The route permits exactly one collector invocation, caps the Arm Architecture Service sequence at five calls, and fixes the allowed functions to `SMCCC_VERSION`, `SMCCC_ARCH_FEATURES`, and `SMCCC_ARCH_FEATURE_AVAILABILITY`. Its report also emits `IZZOS_M7_PRE_SEC_SMCCC_AUTHORIZATION_BINDING_V1`, a deterministic SHA-256 over all input/component digests, the route-evidence digest, route candidate and exact output-buffer geometry for provisioning into the C token.
 
 Vendor/SiP SMCs, direct EL3 register reads, secure-monitor changes, MMIO, device or persistent writes, slot changes, flash/erase/format actions and payload launch must all remain forbidden. Tests reject changed evidence/source hashes, duplicate fields, EL1 routes, repeated invocation, extra calls, unsafe or undersized buffers, assisted-only recovery, write claims and relaxed launch policy. A structurally complete future record is:
 

@@ -66,9 +66,41 @@ FakeInvoke(uint64_t Fid, uint64_t Arg1, M7_SMCCC_RESULT *Result, void *Context)
   *Result = Fake->Responses[Fake->CallCount++];
 }
 
+static void
+PrepareAuthorization(
+  M7_SMCCC_ROUTE_AUTHORIZATION_TOKEN *Token,
+  M7_SMCCC_ROUTE_AUTHORIZATION_EXPECTATION *Expectation
+  )
+{
+  uint32_t Index;
+
+  memset(Token, 0, sizeof(*Token));
+  memset(Expectation, 0, sizeof(*Expectation));
+  Token->Magic = M7_SMCCC_ROUTE_TOKEN_MAGIC;
+  Token->FormatVersion = M7_SMCCC_ROUTE_TOKEN_VERSION;
+  Token->TokenSize = (uint32_t)sizeof(*Token);
+  Token->PolicyFlags = M7_SMCCC_ROUTE_REQUIRED_POLICY_FLAGS;
+  Token->InvocationBudget = 1;
+  Token->SmcccCallLimit = M7_SMCCC_MAX_CALLS;
+  Token->OutputBufferAddress = UINT64_C(0x90000000);
+  Token->OutputBufferCapacity = M7_SMCCC_ROUTE_MIN_BUFFER_CAPACITY;
+  Token->OutputBufferAlignment = UINT64_C(0x1000);
+  Expectation->OutputBufferAddress = Token->OutputBufferAddress;
+  Expectation->OutputBufferCapacity = Token->OutputBufferCapacity;
+  Expectation->OutputBufferAlignment = Token->OutputBufferAlignment;
+  for (Index = 0; Index < M7_SMCCC_ROUTE_DIGEST_SIZE; ++Index) {
+    Token->RouteAuthorizationReportSha256[Index] = (uint8_t)(Index + 1);
+    Token->AuthorizationBindingSha256[Index] = (uint8_t)(Index + UINT8_C(0x80));
+  }
+  memcpy(Expectation->RouteAuthorizationReportSha256, Token->RouteAuthorizationReportSha256, M7_SMCCC_ROUTE_DIGEST_SIZE);
+  memcpy(Expectation->AuthorizationBindingSha256, Token->AuthorizationBindingSha256, M7_SMCCC_ROUTE_DIGEST_SIZE);
+}
+
 int main(int Argc, char **Argv)
 {
-  M7_SMCCC_CALLER_STATE State = {2, 1, 1};
+  M7_SMCCC_CALLER_STATE State = {0};
+  M7_SMCCC_ROUTE_AUTHORIZATION_TOKEN Token;
+  M7_SMCCC_ROUTE_AUTHORIZATION_EXPECTATION Expectation;
   M7_SMCCC_TRANSCRIPT_BINDING Binding;
   M7_SMCCC_TRANSCRIPT_BINDING InvalidBinding;
   M7_SMCCC_CAPTURE Capture;
@@ -81,6 +113,11 @@ int main(int Argc, char **Argv)
 
   assert(Argc == 8);
   Binding = (M7_SMCCC_TRANSCRIPT_BINDING){Argv[2], Argv[3], Argv[4], Argv[5], Argv[6], Argv[7]};
+  PrepareAuthorization(&Token, &Expectation);
+  State.CallerExceptionLevel = M7_SMCCC_EXPECTED_CALLER_EL;
+  State.CallerIsNonSecure = 1;
+  State.RouteAuthorizationToken = &Token;
+  State.RouteAuthorizationExpectation = &Expectation;
 
   if (strcmp(Argv[1], "supported") == 0) {
     Fake = (FAKE_TRANSPORT){ .Responses = {{0x10004, 0}, {0, 0}, {0, 0x4010000}, {0, 0x500}, {0, 0}}, .ResponseCount = 5 };
