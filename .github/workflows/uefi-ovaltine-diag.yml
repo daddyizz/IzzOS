@@ -114,6 +114,9 @@ jobs:
       - name: Test M7 exact pre-SEC SMCCC collector route authorization
         run: bash scripts/test-verify-m7-pre-sec-smccc-route-authorization.sh
 
+      - name: Test M7 deterministic SMCCC route-token provisioning
+        run: bash scripts/test-generate-m7-smccc-route-token.sh
+
       - name: Test M7 SMCCC feature-availability collector contract
         run: bash scripts/test-m7-smccc-feature-availability-collector.sh
 

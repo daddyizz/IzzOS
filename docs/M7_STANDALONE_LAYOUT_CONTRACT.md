@@ -401,6 +401,28 @@ M7_PRE_SEC_SMCCC_ROUTE_AUTHORIZATION_PASS
 
 The authorization scope is one bound feature-availability capture only; it is not payload-launch permission. The gate records project-owner review but does not claim cryptographic attestation. The current exact CPH2413 evidence remains blocked because hard recovery is only `ASSISTED_HARD_RECOVERY_DOCUMENTED` and the temporary route remains candidate-only.
 
+## Deterministic route-token provisioning
+
+Convert a passing route-authorization report into the exact C token and matching expectation consumed by the collector:
+
+```bash
+python3 scripts/generate-m7-smccc-route-token.py \
+  out/m7-pre-sec-smccc-route-authorization.txt \
+  out/generated/M7SmcccRouteAuthorizationProvision.h \
+  out/generated/M7SmcccRouteAuthorizationProvision.c \
+  out/m7-smccc-route-token-generation.txt
+```
+
+The generator accepts no caller-supplied token fields. It revalidates the unique `PASS` classification, binding schema/digest, exact CPH2413 build, verified hard-recovery status, all current collector/transport/emitter hashes, one-capture scope, non-launch/write policy and bounded aligned output-buffer geometry. It hashes the complete authorization report and expands that digest plus `authorization-binding-sha256` into fixed 32-byte C initializers. All policy flags, magic, version, structure size, one-use budget and five-call limit remain compile-time constants from the collector header.
+
+Output is deterministic and consists of a generated header declaring the mutable token and immutable expectation plus a generated C definition. Host tests compare repeated output byte-for-byte, compile it with the collector on Linux, complete one fake-transport capture, reject replay, and reject changed classification, component hash, binding digest, recovery state, buffer, launch policy, invocation scope and duplicate fields. On any validation failure the generator removes stale header/source outputs at the exact requested paths. A successful report is:
+
+```text
+M7_SMCCC_ROUTE_TOKEN_PROVISIONING_PASS
+```
+
+Generated provision files remain absent from the DSC/INF and do not authorize payload launch. Because the current physical-device route evidence does not pass the preceding gate, no actionable token can currently be generated from the real evidence set.
+
 ## Deterministic collector transcript emitter
 
 `M7SmcccCaptureTranscript` converts only a structurally valid `M7_SMCCC_CAPTURE` into `IZZOS_M7_SMCCC_COLLECTOR_CAPTURE_V1`. It reconstructs the call list from compile-time FIDs and the canonical register-opcode array; no caller-supplied FID, opcode, call count or outcome text is rendered. Only `COMPLETE` and `FEATURE_UNAVAILABLE` captures are serializable. Version, discovery, count, opcode and per-query status invariants must all match the collector state machine.

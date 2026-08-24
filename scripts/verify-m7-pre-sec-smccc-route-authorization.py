@@ -247,6 +247,7 @@ lines = [
     f"recovery-emergency-status: {recovery_emergency or 'MISSING'}",
     f"output-buffer-address: {field(route, 'output-buffer-address') or 'MISSING'}",
     f"output-buffer-capacity: {field(route, 'output-buffer-capacity') or 'MISSING'}",
+    f"output-buffer-alignment: {field(route, 'output-buffer-alignment') or 'MISSING'}",
     "",
     "checks:",
     *[f'{name}: {"PASS" if passed else "FAIL"}' for name, passed in checks],
