@@ -102,6 +102,9 @@ jobs:
       - name: Test M7 coherency-domain and secondary-CPU assertion schema gate
         run: bash scripts/test-verify-m7-coherency-secondary-state.sh
 
+      - name: Test M7 SM8475 coherency provenance boundary gate
+        run: bash scripts/test-verify-m7-sm8475-coherency-provenance.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 

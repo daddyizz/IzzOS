@@ -298,6 +298,25 @@ M7_COHERENCY_SECONDARY_STATE_ASSERTION_SCHEMA_PASS
 
 The upstream [AArch64 Linux boot contract](https://www.kernel.org/doc/html/latest/arch/arm64/booting.html) explicitly allows coherency enablement to require implementation-defined initialization. Therefore this gate intentionally validates assertion structure only: the opaque domain token and broadcast state remain self-reported, not register-attested proof. Capture-route authorization, the exact Qualcomm coherency mechanism, Secure EL3 state, wrapper implementation, DSC/FDF promotion, MMIO and launch remain blocked.
 
+## SM8475 coherency provenance boundary gate
+
+Bind the assertion report to an immutable snapshot of the OnePlus-published Cape device tree and PSCI binding:
+
+```bash
+python3 scripts/verify-m7-sm8475-coherency-provenance.py \
+  out/m7-coherency-secondary-state.txt \
+  out/m7-sm8475-coherency-provenance-raw.txt \
+  out/m7-sm8475-coherency-provenance.txt
+```
+
+Schema `IZZOS_M7_SM8475_COHERENCY_PROVENANCE_V1` pins OnePlus commit `a24e032ef338174bfa835bed0f8e2ad3620f4ffc`, the exact `cape.dtsi` blob, and the exact PSCI binding blob. At that snapshot, [Cape declares eight CPUs with `enable-method = "psci"`](https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8475/blob/a24e032ef338174bfa835bed0f8e2ad3620f4ffc/kernel_platform/qcom/proprietary/devicetree/qcom/cape.dtsi), an `arm,psci-1.0` node, and the SMC conduit. The bound [PSCI documentation](https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8475/blob/a24e032ef338174bfa835bed0f8e2ad3620f4ffc/kernel_platform/qcom/proprietary/devicetree/bindings/arm/psci.txt) assigns CPU power operations such as CPU_ON to PSCI-compatible firmware. A complete provenance result is:
+
+```text
+M7_SM8475_COHERENCY_PROVENANCE_BOUNDARY_PASS
+```
+
+This result proves only the public firmware-interface boundary: secondary CPU enable/power control is exposed through PSCI over SMC. The public OnePlus files do not disclose an exact SM8475 coherency register, mask, or firmware sequence. The gate therefore rejects invented `CPUECTLR_EL1.SMPEN` claims, guessed MMIO addresses, or any attempt to turn this source provenance into wrapper, DSC/FDF, or launch authorization.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
@@ -305,7 +324,7 @@ The following remain separate evidence gates:
 - actual FD size and alignment from a concrete SEC/PEI/DXE composition;
 - final runtime destination and FD base, plus exact Qualcomm FD-for-kernel replacement/relocation behavior beyond the bounded stock Linux arithmetic;
 - independently authenticated Qualcomm entry observation and capture route beyond the schema-only snapshot gate;
-- Secure EL3 extension-state evidence for an EL2 entry, independently validated Qualcomm coherency-mechanism evidence and verified execution of the required SEC/PrePi wrapper beyond the bounded assertion schema;
+- Secure EL3 extension-state evidence for an EL2 entry, the exact Qualcomm EL3/internal coherency implementation beyond the public PSCI/SMC boundary, and verified execution of the required SEC/PrePi wrapper;
 - runtime GIC/timer/platform-init ownership and exception-level requirements beyond the bounded static-DTB enumeration;
 - exact temporary Android boot-container construction only after the input-binding gate and Qualcomm semantics both pass;
 - recovery and exact-device route authorization.
