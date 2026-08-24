@@ -747,6 +747,45 @@ M7_CHECKPOINT_PUBLICATION_QUORUM_ROOT_RECOVERY_POLICY_PASS_EXTERNAL_DISTRIBUTION
 
 The verifier still cannot discover a newer checkpoint that was never supplied to it. External distribution diversity, witness availability, private-key custody and any future root-recovery event remain separate operational responsibilities. This gate performs no device command, key write, recovery activation, wrapper execution, promotion, container construction or launch.
 
+## Governance-root recovery event gate
+
+Validate a concrete root-replacement event against the exact previously approved recovery policy, without modifying repository or device trust state:
+
+```bash
+python3 scripts/verify-m7-governance-root-recovery-event.py \
+  out/m7-checkpoint-publication-root-recovery-verification.txt \
+  out/m7-checkpoint-publication-root-recovery-policy.txt \
+  out/m7-key-governance-anti-rollback-checkpoint.txt \
+  out/m7-previous-governance-root-manifest.txt \
+  out/m7-previous-governance-root-public-key.pem \
+  out/m7-replacement-governance-root-manifest.txt \
+  out/m7-replacement-governance-root-public-key.pem \
+  out/m7-governance-root-recovery-event.txt \
+  out/m7-recovery-custodian-1-public-key.pem \
+  out/m7-recovery-custodian-1-signature.bin \
+  out/m7-recovery-custodian-2-public-key.pem \
+  out/m7-recovery-custodian-2-signature.bin \
+  out/m7-recovery-custodian-3-public-key.pem \
+  out/m7-recovery-custodian-3-signature.bin \
+  out/m7-replacement-root-event-signature.bin \
+  out/m7-governance-root-recovery-checkpoint.txt \
+  out/m7-replacement-root-checkpoint-signature.bin \
+  2026-08-25T00:06:00Z \
+  out/m7-governance-root-recovery-event-verification.txt
+```
+
+Canonical schema `IZZOS_M7_GOVERNANCE_ROOT_RECOVERY_EVENT_V1` binds the exact prior publication verification, recovery policy and anti-rollback checkpoint; the revoked previous root; the replacement root manifest/key; and a strictly monotonic transition to the next governance epoch with sequence one. At least two of the three policy-pinned recovery custodians must sign the same event bytes. The replacement root must also sign the event to prove key possession.
+
+The canonical `IZZOS_M7_GOVERNANCE_ROOT_RECOVERY_CHECKPOINT_V1` binds the event, previous checkpoint, replacement manifest/key, new epoch/sequence and revoked old-root state. A separate replacement-root signature covers the complete checkpoint. Changed bytes, fewer than two valid custodian signatures, a rogue replacement key, failure to revoke the old root, a non-advancing epoch, duplicate fields or any signed write/launch claim fail closed.
+
+A consistent supplied recovery transition is classified:
+
+```text
+M7_GOVERNANCE_ROOT_RECOVERY_EVENT_PASS_REPUBLICATION_REQUIRED
+```
+
+This result validates supplied cryptographic evidence only. It does not alter a trust store, prove external private-key custody or make the recovered checkpoint globally current. The recovered checkpoint still requires fresh independent republication and witness quorum before distributed trust can move to it. No device command, wrapper execution, promotion, container construction or launch is authorized.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:

@@ -159,6 +159,9 @@ jobs:
       - name: Test M7 checkpoint publication quorum and governance-root recovery policy gate
         run: bash scripts/test-verify-m7-checkpoint-publication-root-recovery.sh
 
+      - name: Test M7 governance-root recovery event gate
+        run: bash scripts/test-verify-m7-governance-root-recovery-event.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 
