@@ -28,6 +28,8 @@ SOURCE_SHA="$(sha256sum "$LIB/M7SmcccFeatureAvailabilityCollector.c" | awk '{pri
 TRANSPORT_SHA="$(sha256sum "$LIB/M7SmcccCallAArch64.S" | awk '{print $1}')"
 EMITTER_HEADER_SHA="$(sha256sum "$LIB/M7SmcccCaptureTranscript.h" | awk '{print $1}')"
 EMITTER_SOURCE_SHA="$(sha256sum "$LIB/M7SmcccCaptureTranscript.c" | awk '{print $1}')"
+ORCHESTRATOR_HEADER_SHA="$(sha256sum "$LIB/M7SmcccCaptureOrchestrator.h" | awk '{print $1}')"
+ORCHESTRATOR_SOURCE_SHA="$(sha256sum "$LIB/M7SmcccCaptureOrchestrator.c" | awk '{print $1}')"
 BINDING_SHA="$(printf 'm7-final-gate-authorization-binding' | sha256sum | awk '{print $1}')"
 CAPTURE_SHA="$(printf 'm7-final-gate-collector-capture' | sha256sum | awk '{print $1}')"
 
@@ -37,6 +39,8 @@ collector-source-sha256: $SOURCE_SHA
 collector-transport-sha256: $TRANSPORT_SHA
 transcript-emitter-header-sha256: $EMITTER_HEADER_SHA
 transcript-emitter-source-sha256: $EMITTER_SOURCE_SHA
+capture-orchestrator-header-sha256: $ORCHESTRATOR_HEADER_SHA
+capture-orchestrator-source-sha256: $ORCHESTRATOR_SOURCE_SHA
 authorization-binding-schema: IZZOS_M7_PRE_SEC_SMCCC_AUTHORIZATION_BINDING_V1
 authorization-binding-sha256: $BINDING_SHA
 output-buffer-address: 0x90000000
@@ -65,6 +69,8 @@ collector-source-sha256: $SOURCE_SHA
 collector-transport-sha256: $TRANSPORT_SHA
 transcript-emitter-header-sha256: $EMITTER_HEADER_SHA
 transcript-emitter-source-sha256: $EMITTER_SOURCE_SHA
+capture-orchestrator-header-sha256: $ORCHESTRATOR_HEADER_SHA
+capture-orchestrator-source-sha256: $ORCHESTRATOR_SOURCE_SHA
 collector-outcome: $outcome
 capture-serialization: DETERMINISTIC_COLLECTOR_TRANSCRIPT_V1
 capture-route-authorization: BOUND_SINGLE_USE_TOKEN_TO_DECLARED_PROJECT_REVIEW

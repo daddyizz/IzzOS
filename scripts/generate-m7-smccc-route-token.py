@@ -17,6 +17,8 @@ COMPONENTS = {
     "collector-transport-sha256": LIB / "M7SmcccCallAArch64.S",
     "transcript-emitter-header-sha256": LIB / "M7SmcccCaptureTranscript.h",
     "transcript-emitter-source-sha256": LIB / "M7SmcccCaptureTranscript.c",
+    "capture-orchestrator-header-sha256": LIB / "M7SmcccCaptureOrchestrator.h",
+    "capture-orchestrator-source-sha256": LIB / "M7SmcccCaptureOrchestrator.c",
 }
 
 BINDING_SCHEMA = "IZZOS_M7_PRE_SEC_SMCCC_AUTHORIZATION_BINDING_V1"

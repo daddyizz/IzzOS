@@ -17,6 +17,8 @@ SOURCE = LIB / "M7SmcccFeatureAvailabilityCollector.c"
 TRANSPORT = LIB / "M7SmcccCallAArch64.S"
 EMITTER_HEADER = LIB / "M7SmcccCaptureTranscript.h"
 EMITTER_SOURCE = LIB / "M7SmcccCaptureTranscript.c"
+ORCHESTRATOR_HEADER = LIB / "M7SmcccCaptureOrchestrator.h"
+ORCHESTRATOR_SOURCE = LIB / "M7SmcccCaptureOrchestrator.c"
 
 CAPTURE_SCHEMA = "IZZOS_M7_SMCCC_COLLECTOR_CAPTURE_V1"
 RAW_SCHEMA = "IZZOS_M7_SMCCC_EL3_FEATURE_AVAILABILITY_V1"
@@ -86,7 +88,7 @@ def write_report(lines, exit_code=0):
         raise SystemExit(exit_code)
 
 
-for required in (HANDOFF, CAPTURE, ROUTE_AUTHORIZATION, HEADER, SOURCE, TRANSPORT, EMITTER_HEADER, EMITTER_SOURCE):
+for required in (HANDOFF, CAPTURE, ROUTE_AUTHORIZATION, HEADER, SOURCE, TRANSPORT, EMITTER_HEADER, EMITTER_SOURCE, ORCHESTRATOR_HEADER, ORCHESTRATOR_SOURCE):
     if not required.is_file():
         raise SystemExit(f"ERROR: required M7 SMCCC serialization input not found: {required}")
 
@@ -102,6 +104,8 @@ component_hashes = {
     "collector-transport-sha256": sha256(TRANSPORT),
     "transcript-emitter-header-sha256": sha256(EMITTER_HEADER),
     "transcript-emitter-source-sha256": sha256(EMITTER_SOURCE),
+    "capture-orchestrator-header-sha256": sha256(ORCHESTRATOR_HEADER),
+    "capture-orchestrator-source-sha256": sha256(ORCHESTRATOR_SOURCE),
 }
 outcome = field(capture, "collector-outcome")
 declared_calls = decimal_field(capture, "calls-issued")

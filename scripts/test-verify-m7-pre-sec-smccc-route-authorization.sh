@@ -13,6 +13,8 @@ SOURCE_SHA="$(sha256sum "$LIB/M7SmcccFeatureAvailabilityCollector.c" | awk '{pri
 TRANSPORT_SHA="$(sha256sum "$LIB/M7SmcccCallAArch64.S" | awk '{print $1}')"
 EMITTER_HEADER_SHA="$(sha256sum "$LIB/M7SmcccCaptureTranscript.h" | awk '{print $1}')"
 EMITTER_SOURCE_SHA="$(sha256sum "$LIB/M7SmcccCaptureTranscript.c" | awk '{print $1}')"
+ORCHESTRATOR_HEADER_SHA="$(sha256sum "$LIB/M7SmcccCaptureOrchestrator.h" | awk '{print $1}')"
+ORCHESTRATOR_SOURCE_SHA="$(sha256sum "$LIB/M7SmcccCaptureOrchestrator.c" | awk '{print $1}')"
 
 cat > "$TMP/requirements.txt" <<'EOF'
 exact-device-build: CPH2413_15.0.0.1901(EX01)
@@ -65,6 +67,8 @@ collector-source-sha256: $SOURCE_SHA
 collector-transport-sha256: $TRANSPORT_SHA
 transcript-emitter-header-sha256: $EMITTER_HEADER_SHA
 transcript-emitter-source-sha256: $EMITTER_SOURCE_SHA
+capture-orchestrator-header-sha256: $ORCHESTRATOR_HEADER_SHA
+capture-orchestrator-source-sha256: $ORCHESTRATOR_SOURCE_SHA
 exact-device-build: CPH2413_15.0.0.1901(EX01)
 device-model: CPH2413
 vendor-device: OP5552L1
@@ -138,6 +142,9 @@ assert_route_blocked() {
 assert_route_blocked wrong-component-hash \
   "s/collector-transport-sha256: $TRANSPORT_SHA/collector-transport-sha256: 0000000000000000000000000000000000000000000000000000000000000000/" \
   route-collector-transport-sha256-matches
+assert_route_blocked wrong-orchestrator-hash \
+  "s/capture-orchestrator-source-sha256: $ORCHESTRATOR_SOURCE_SHA/capture-orchestrator-source-sha256: 0000000000000000000000000000000000000000000000000000000000000000/" \
+  route-capture-orchestrator-source-sha256-matches
 assert_route_blocked el1-caller \
   's/caller-exception-level: EL2/caller-exception-level: EL1/' \
   route-executes-at-pre-sec-nonsecure-el2

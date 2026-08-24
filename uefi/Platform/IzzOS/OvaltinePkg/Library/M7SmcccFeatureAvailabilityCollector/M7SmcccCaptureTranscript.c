@@ -155,6 +155,22 @@ IsSerializableCapture (
   return 0;
 }
 
+int
+M7IsValidSmcccTranscriptBinding (
+  const M7_SMCCC_TRANSCRIPT_BINDING *Binding
+  )
+{
+  return Binding != 0 &&
+         IsExactSha256 (Binding->SecureEl3HandoffReportSha256) &&
+         IsExactSha256 (Binding->CollectorHeaderSha256) &&
+         IsExactSha256 (Binding->CollectorSourceSha256) &&
+         IsExactSha256 (Binding->CollectorTransportSha256) &&
+         IsExactSha256 (Binding->TranscriptEmitterHeaderSha256) &&
+         IsExactSha256 (Binding->TranscriptEmitterSourceSha256) &&
+         IsExactSha256 (Binding->CaptureOrchestratorHeaderSha256) &&
+         IsExactSha256 (Binding->CaptureOrchestratorSourceSha256);
+}
+
 static void
 AppendCharacter (
   TRANSCRIPT_WRITER *Writer,
@@ -305,6 +321,8 @@ RenderTranscript (
   AppendBindingLine (Writer, "collector-transport-sha256", Binding->CollectorTransportSha256);
   AppendBindingLine (Writer, "transcript-emitter-header-sha256", Binding->TranscriptEmitterHeaderSha256);
   AppendBindingLine (Writer, "transcript-emitter-source-sha256", Binding->TranscriptEmitterSourceSha256);
+  AppendBindingLine (Writer, "capture-orchestrator-header-sha256", Binding->CaptureOrchestratorHeaderSha256);
+  AppendBindingLine (Writer, "capture-orchestrator-source-sha256", Binding->CaptureOrchestratorSourceSha256);
   AppendText (Writer, "route-authorization-report-sha256: ");
   AppendDigest (Writer, Capture->RouteAuthorizationReportSha256);
   AppendCharacter (Writer, '\n');
@@ -382,12 +400,7 @@ M7EmitSmcccCaptureTranscript (
   if (Binding == 0 || Capture == 0 || TranscriptLength == 0) {
     return M7SmcccTranscriptInvalidArgument;
   }
-  if (!IsExactSha256 (Binding->SecureEl3HandoffReportSha256) ||
-      !IsExactSha256 (Binding->CollectorHeaderSha256) ||
-      !IsExactSha256 (Binding->CollectorSourceSha256) ||
-      !IsExactSha256 (Binding->CollectorTransportSha256) ||
-      !IsExactSha256 (Binding->TranscriptEmitterHeaderSha256) ||
-      !IsExactSha256 (Binding->TranscriptEmitterSourceSha256)) {
+  if (!M7IsValidSmcccTranscriptBinding (Binding)) {
     return M7SmcccTranscriptInvalidBinding;
   }
   if (!IsSerializableCapture (Capture)) {

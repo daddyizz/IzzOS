@@ -37,7 +37,9 @@ required_literals = [
 
 checks = [
     ("emitter-has-all-fixed-schema-and-safety-lines", all(value in source for value in required_literals)),
-    ("emitter-binds-six-exact-sha256-values", header.count("Sha256;") == 6 and source.count("IsExactSha256 (Binding->") == 6),
+    ("emitter-binds-eight-exact-sha256-values", header.count("Sha256;") == 8 and source.count("IsExactSha256 (Binding->") == 8),
+    ("emitter-exposes-reusable-binding-validator", "M7IsValidSmcccTranscriptBinding" in header and source.count("M7IsValidSmcccTranscriptBinding (") == 2),
+    ("emitter-binds-orchestrator-source-identity", '"capture-orchestrator-header-sha256"' in source and '"capture-orchestrator-source-sha256"' in source),
     ("emitter-binds-route-report-and-token-digest", "route-authorization-report-sha256: " in source and "authorization-binding-sha256: " in source and source.count("AppendDigest (Writer, Capture->") == 2),
     ("emitter-binds-authorized-output-buffer", "authorized-output-buffer-address: " in source and "authorized-output-buffer-capacity: " in source and "authorized-output-buffer-alignment: " in source),
     ("emitter-rejects-missing-authorization-binding", "HasValidAuthorizationBinding" in source),

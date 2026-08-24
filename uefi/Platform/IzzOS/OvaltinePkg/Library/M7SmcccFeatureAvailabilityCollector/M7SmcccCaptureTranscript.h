@@ -14,6 +14,8 @@ typedef struct {
   const char *CollectorTransportSha256;
   const char *TranscriptEmitterHeaderSha256;
   const char *TranscriptEmitterSourceSha256;
+  const char *CaptureOrchestratorHeaderSha256;
+  const char *CaptureOrchestratorSourceSha256;
 } M7_SMCCC_TRANSCRIPT_BINDING;
 
 typedef enum {
@@ -23,6 +25,11 @@ typedef enum {
   M7SmcccTranscriptCaptureNotSerializable,
   M7SmcccTranscriptBufferTooSmall
 } M7_SMCCC_TRANSCRIPT_STATUS;
+
+int
+M7IsValidSmcccTranscriptBinding (
+  const M7_SMCCC_TRANSCRIPT_BINDING *Binding
+  );
 
 M7_SMCCC_TRANSCRIPT_STATUS
 M7EmitSmcccCaptureTranscript (

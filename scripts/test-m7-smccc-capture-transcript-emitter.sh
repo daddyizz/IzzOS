@@ -41,6 +41,8 @@ SOURCE_SHA="$(sha256sum "$LIB/M7SmcccFeatureAvailabilityCollector.c" | awk '{pri
 TRANSPORT_SHA="$(sha256sum "$LIB/M7SmcccCallAArch64.S" | awk '{print $1}')"
 EMITTER_HEADER_SHA="$(sha256sum "$LIB/M7SmcccCaptureTranscript.h" | awk '{print $1}')"
 EMITTER_SOURCE_SHA="$(sha256sum "$LIB/M7SmcccCaptureTranscript.c" | awk '{print $1}')"
+ORCHESTRATOR_HEADER_SHA="$(sha256sum "$LIB/M7SmcccCaptureOrchestrator.h" | awk '{print $1}')"
+ORCHESTRATOR_SOURCE_SHA="$(sha256sum "$LIB/M7SmcccCaptureOrchestrator.c" | awk '{print $1}')"
 BINDING_SHA="$(printf 'm7-emitter-authorization-binding' | sha256sum | awk '{print $1}')"
 
 cat > "$TMP/route-authorization.txt" <<EOF
@@ -49,6 +51,8 @@ collector-source-sha256: $SOURCE_SHA
 collector-transport-sha256: $TRANSPORT_SHA
 transcript-emitter-header-sha256: $EMITTER_HEADER_SHA
 transcript-emitter-source-sha256: $EMITTER_SOURCE_SHA
+capture-orchestrator-header-sha256: $ORCHESTRATOR_HEADER_SHA
+capture-orchestrator-source-sha256: $ORCHESTRATOR_SOURCE_SHA
 authorization-binding-schema: IZZOS_M7_PRE_SEC_SMCCC_AUTHORIZATION_BINDING_V1
 authorization-binding-sha256: $BINDING_SHA
 output-buffer-address: 0x90000000
@@ -143,9 +147,9 @@ int main(int Argc, char **Argv)
   size_t Length;
   size_t Index;
 
-  assert(Argc == 10);
-  Binding = (M7_SMCCC_TRANSCRIPT_BINDING){Argv[2], Argv[3], Argv[4], Argv[5], Argv[6], Argv[7]};
-  PrepareAuthorization(&Token, &Expectation, Argv[8], Argv[9]);
+  assert(Argc == 12);
+  Binding = (M7_SMCCC_TRANSCRIPT_BINDING){Argv[2], Argv[3], Argv[4], Argv[5], Argv[6], Argv[7], Argv[8], Argv[9]};
+  PrepareAuthorization(&Token, &Expectation, Argv[10], Argv[11]);
   State.CallerExceptionLevel = M7_SMCCC_EXPECTED_CALLER_EL;
   State.CallerIsNonSecure = 1;
   State.RouteAuthorizationToken = &Token;
@@ -196,7 +200,8 @@ EOF
 emit() {
   local mode="$1" output="$2"
   "$TMP/emitter-test" "$mode" "$HANDOFF_SHA" "$HEADER_SHA" "$SOURCE_SHA" "$TRANSPORT_SHA" \
-    "$EMITTER_HEADER_SHA" "$EMITTER_SOURCE_SHA" "$ROUTE_SHA" "$BINDING_SHA" > "$output"
+    "$EMITTER_HEADER_SHA" "$EMITTER_SOURCE_SHA" "$ORCHESTRATOR_HEADER_SHA" "$ORCHESTRATOR_SOURCE_SHA" \
+    "$ROUTE_SHA" "$BINDING_SHA" > "$output"
 }
 
 emit supported "$TMP/supported-capture.txt"
@@ -205,6 +210,7 @@ cmp "$TMP/supported-capture.txt" "$TMP/supported-capture-2.txt"
 grep -q '^collector-outcome: COMPLETE$' "$TMP/supported-capture.txt"
 grep -q "^route-authorization-report-sha256: $ROUTE_SHA$" "$TMP/supported-capture.txt"
 grep -q "^authorization-binding-sha256: $BINDING_SHA$" "$TMP/supported-capture.txt"
+grep -q "^capture-orchestrator-source-sha256: $ORCHESTRATOR_SOURCE_SHA$" "$TMP/supported-capture.txt"
 grep -q '^route-authorization-input: BOUND_SINGLE_USE_TOKEN$' "$TMP/supported-capture.txt"
 grep -q '^authorized-output-buffer-address: 0x90000000$' "$TMP/supported-capture.txt"
 grep -q '^calls-issued: 5$' "$TMP/supported-capture.txt"
