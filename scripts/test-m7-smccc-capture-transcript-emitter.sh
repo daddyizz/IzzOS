@@ -41,6 +41,28 @@ SOURCE_SHA="$(sha256sum "$LIB/M7SmcccFeatureAvailabilityCollector.c" | awk '{pri
 TRANSPORT_SHA="$(sha256sum "$LIB/M7SmcccCallAArch64.S" | awk '{print $1}')"
 EMITTER_HEADER_SHA="$(sha256sum "$LIB/M7SmcccCaptureTranscript.h" | awk '{print $1}')"
 EMITTER_SOURCE_SHA="$(sha256sum "$LIB/M7SmcccCaptureTranscript.c" | awk '{print $1}')"
+BINDING_SHA="$(printf 'm7-emitter-authorization-binding' | sha256sum | awk '{print $1}')"
+
+cat > "$TMP/route-authorization.txt" <<EOF
+collector-header-sha256: $HEADER_SHA
+collector-source-sha256: $SOURCE_SHA
+collector-transport-sha256: $TRANSPORT_SHA
+transcript-emitter-header-sha256: $EMITTER_HEADER_SHA
+transcript-emitter-source-sha256: $EMITTER_SOURCE_SHA
+authorization-binding-schema: IZZOS_M7_PRE_SEC_SMCCC_AUTHORIZATION_BINDING_V1
+authorization-binding-sha256: $BINDING_SHA
+output-buffer-address: 0x90000000
+output-buffer-capacity: 0x1000
+output-buffer-alignment: 0x1000
+route-authorization-authenticity: DECLARED_PROJECT_OWNER_REVIEW_NOT_CRYPTOGRAPHICALLY_ATTESTED
+authorization-scope: BOUND_SMCCC_FEATURE_AVAILABILITY_CAPTURE_ONLY
+payload-launch-authorization: NO
+persistent-writes: FORBIDDEN
+slot-changes: FORBIDDEN
+collector-invocation-authorization: EXACTLY_ONCE_FOR_BOUND_CAPTURE_ONLY
+classification: M7_PRE_SEC_SMCCC_ROUTE_AUTHORIZATION_PASS
+EOF
+ROUTE_SHA="$(sha256sum "$TMP/route-authorization.txt" | awk '{print $1}')"
 
 cat > "$TMP/harness.c" <<'EOF'
 #include <assert.h>
@@ -67,13 +89,25 @@ FakeInvoke(uint64_t Fid, uint64_t Arg1, M7_SMCCC_RESULT *Result, void *Context)
 }
 
 static void
-PrepareAuthorization(
-  M7_SMCCC_ROUTE_AUTHORIZATION_TOKEN *Token,
-  M7_SMCCC_ROUTE_AUTHORIZATION_EXPECTATION *Expectation
-  )
+ParseDigest(const char *Text, uint8_t Digest[M7_SMCCC_ROUTE_DIGEST_SIZE])
 {
   uint32_t Index;
+  assert(strlen(Text) == M7_SMCCC_ROUTE_DIGEST_SIZE * 2);
+  for (Index = 0; Index < M7_SMCCC_ROUTE_DIGEST_SIZE; ++Index) {
+    unsigned int Value;
+    assert(sscanf(&Text[Index * 2], "%2x", &Value) == 1);
+    Digest[Index] = (uint8_t)Value;
+  }
+}
 
+static void
+PrepareAuthorization(
+  M7_SMCCC_ROUTE_AUTHORIZATION_TOKEN *Token,
+  M7_SMCCC_ROUTE_AUTHORIZATION_EXPECTATION *Expectation,
+  const char *RouteReportSha256,
+  const char *AuthorizationBindingSha256
+  )
+{
   memset(Token, 0, sizeof(*Token));
   memset(Expectation, 0, sizeof(*Expectation));
   Token->Magic = M7_SMCCC_ROUTE_TOKEN_MAGIC;
@@ -88,10 +122,8 @@ PrepareAuthorization(
   Expectation->OutputBufferAddress = Token->OutputBufferAddress;
   Expectation->OutputBufferCapacity = Token->OutputBufferCapacity;
   Expectation->OutputBufferAlignment = Token->OutputBufferAlignment;
-  for (Index = 0; Index < M7_SMCCC_ROUTE_DIGEST_SIZE; ++Index) {
-    Token->RouteAuthorizationReportSha256[Index] = (uint8_t)(Index + 1);
-    Token->AuthorizationBindingSha256[Index] = (uint8_t)(Index + UINT8_C(0x80));
-  }
+  ParseDigest(RouteReportSha256, Token->RouteAuthorizationReportSha256);
+  ParseDigest(AuthorizationBindingSha256, Token->AuthorizationBindingSha256);
   memcpy(Expectation->RouteAuthorizationReportSha256, Token->RouteAuthorizationReportSha256, M7_SMCCC_ROUTE_DIGEST_SIZE);
   memcpy(Expectation->AuthorizationBindingSha256, Token->AuthorizationBindingSha256, M7_SMCCC_ROUTE_DIGEST_SIZE);
 }
@@ -111,9 +143,9 @@ int main(int Argc, char **Argv)
   size_t Length;
   size_t Index;
 
-  assert(Argc == 8);
+  assert(Argc == 10);
   Binding = (M7_SMCCC_TRANSCRIPT_BINDING){Argv[2], Argv[3], Argv[4], Argv[5], Argv[6], Argv[7]};
-  PrepareAuthorization(&Token, &Expectation);
+  PrepareAuthorization(&Token, &Expectation, Argv[8], Argv[9]);
   State.CallerExceptionLevel = M7_SMCCC_EXPECTED_CALLER_EL;
   State.CallerIsNonSecure = 1;
   State.RouteAuthorizationToken = &Token;
@@ -143,6 +175,9 @@ int main(int Argc, char **Argv)
   Tampered = Capture;
   Tampered.FeatureQueries[0].RegisterOpcode = 0;
   assert(M7EmitSmcccCaptureTranscript(&Binding, &Tampered, Buffer, sizeof(Buffer), &Length) == M7SmcccTranscriptCaptureNotSerializable);
+  Tampered = Capture;
+  memset(Tampered.AuthorizationBindingSha256, 0, sizeof(Tampered.AuthorizationBindingSha256));
+  assert(M7EmitSmcccCaptureTranscript(&Binding, &Tampered, Buffer, sizeof(Buffer), &Length) == M7SmcccTranscriptCaptureNotSerializable);
   InvalidBinding = Binding;
   InvalidBinding.TranscriptEmitterSourceSha256 = "bad";
   assert(M7EmitSmcccCaptureTranscript(&InvalidBinding, &Capture, Buffer, sizeof(Buffer), &Length) == M7SmcccTranscriptInvalidBinding);
@@ -161,16 +196,20 @@ EOF
 emit() {
   local mode="$1" output="$2"
   "$TMP/emitter-test" "$mode" "$HANDOFF_SHA" "$HEADER_SHA" "$SOURCE_SHA" "$TRANSPORT_SHA" \
-    "$EMITTER_HEADER_SHA" "$EMITTER_SOURCE_SHA" > "$output"
+    "$EMITTER_HEADER_SHA" "$EMITTER_SOURCE_SHA" "$ROUTE_SHA" "$BINDING_SHA" > "$output"
 }
 
 emit supported "$TMP/supported-capture.txt"
 emit supported "$TMP/supported-capture-2.txt"
 cmp "$TMP/supported-capture.txt" "$TMP/supported-capture-2.txt"
 grep -q '^collector-outcome: COMPLETE$' "$TMP/supported-capture.txt"
+grep -q "^route-authorization-report-sha256: $ROUTE_SHA$" "$TMP/supported-capture.txt"
+grep -q "^authorization-binding-sha256: $BINDING_SHA$" "$TMP/supported-capture.txt"
+grep -q '^route-authorization-input: BOUND_SINGLE_USE_TOKEN$' "$TMP/supported-capture.txt"
+grep -q '^authorized-output-buffer-address: 0x90000000$' "$TMP/supported-capture.txt"
 grep -q '^calls-issued: 5$' "$TMP/supported-capture.txt"
 grep -q '^collector-call: index=4 fid=0xC0000003 arg1=0x1E1320 x0=0x0 x1=0x0$' "$TMP/supported-capture.txt"
-"$PYTHON" "$SERIALIZE" "$TMP/handoff.txt" "$TMP/supported-capture.txt" "$TMP/supported-raw.txt" "$TMP/supported-report.txt" >/dev/null
+"$PYTHON" "$SERIALIZE" "$TMP/handoff.txt" "$TMP/supported-capture.txt" "$TMP/supported-raw.txt" "$TMP/supported-report.txt" "$TMP/route-authorization.txt" >/dev/null
 grep -q '^classification: M7_SMCCC_CAPTURE_SERIALIZATION_PASS$' "$TMP/supported-report.txt"
 "$PYTHON" "$VERIFY" "$TMP/handoff.txt" "$TMP/supported-raw.txt" "$TMP/supported-gate.txt" >/dev/null
 grep -q '^classification: M7_SMCCC_EL3_FEATURE_AVAILABILITY_CORROBORATION_PASS$' "$TMP/supported-gate.txt"
@@ -179,7 +218,7 @@ emit unsupported "$TMP/unsupported-capture.txt"
 grep -q '^collector-outcome: FEATURE_UNAVAILABLE$' "$TMP/unsupported-capture.txt"
 grep -q '^calls-issued: 2$' "$TMP/unsupported-capture.txt"
 test "$(grep -c '^collector-call:' "$TMP/unsupported-capture.txt")" -eq 2
-"$PYTHON" "$SERIALIZE" "$TMP/handoff.txt" "$TMP/unsupported-capture.txt" "$TMP/unsupported-raw.txt" "$TMP/unsupported-report.txt" >/dev/null
+"$PYTHON" "$SERIALIZE" "$TMP/handoff.txt" "$TMP/unsupported-capture.txt" "$TMP/unsupported-raw.txt" "$TMP/unsupported-report.txt" "$TMP/route-authorization.txt" >/dev/null
 grep -q '^classification: M7_SMCCC_CAPTURE_SERIALIZATION_PASS$' "$TMP/unsupported-report.txt"
 "$PYTHON" "$VERIFY" "$TMP/handoff.txt" "$TMP/unsupported-raw.txt" "$TMP/unsupported-gate.txt" >/dev/null
 grep -q '^classification: M7_SMCCC_EL3_FEATURE_AVAILABILITY_ROUTE_UNSUPPORTED$' "$TMP/unsupported-gate.txt"

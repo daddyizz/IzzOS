@@ -136,10 +136,34 @@ InitializeCapture (
   Capture->FeatureQueriesIssued = 0;
   Capture->SmcccVersionResult = 0;
   Capture->FeatureDiscoveryResult = 0;
+  Capture->AuthorizedOutputBufferAddress = 0;
+  Capture->AuthorizedOutputBufferCapacity = 0;
+  Capture->AuthorizedOutputBufferAlignment = 0;
+  for (Index = 0; Index < M7_SMCCC_ROUTE_DIGEST_SIZE; ++Index) {
+    Capture->RouteAuthorizationReportSha256[Index] = 0;
+    Capture->AuthorizationBindingSha256[Index] = 0;
+  }
   for (Index = 0; Index < M7_SMCCC_MAX_FEATURE_QUERIES; ++Index) {
     Capture->FeatureQueries[Index].RegisterOpcode = mFeatureRegisterOpcodes[Index];
     Capture->FeatureQueries[Index].Status = M7_SMCCC_NOT_SUPPORTED_64;
     Capture->FeatureQueries[Index].AvailabilityMask = 0;
+  }
+}
+
+static void
+BindAuthorizationToCapture (
+  M7_SMCCC_CAPTURE *Capture,
+  const M7_SMCCC_ROUTE_AUTHORIZATION_TOKEN *Token
+  )
+{
+  uint32_t Index;
+
+  Capture->AuthorizedOutputBufferAddress = Token->OutputBufferAddress;
+  Capture->AuthorizedOutputBufferCapacity = Token->OutputBufferCapacity;
+  Capture->AuthorizedOutputBufferAlignment = Token->OutputBufferAlignment;
+  for (Index = 0; Index < M7_SMCCC_ROUTE_DIGEST_SIZE; ++Index) {
+    Capture->RouteAuthorizationReportSha256[Index] = Token->RouteAuthorizationReportSha256[Index];
+    Capture->AuthorizationBindingSha256[Index] = Token->AuthorizationBindingSha256[Index];
   }
 }
 
@@ -176,6 +200,7 @@ M7CollectSmcccFeatureAvailability (
     Capture->Outcome = M7SmcccCollectorRouteNotAuthorized;
     return Capture->Outcome;
   }
+  BindAuthorizationToCapture (Capture, CallerState->RouteAuthorizationToken);
 
   Invoke (M7_SMCCC_VERSION_FID, 0, &Result, InvokeContext);
   Capture->CallsIssued = 1;

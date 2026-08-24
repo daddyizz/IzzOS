@@ -23,7 +23,7 @@ required_literals = [
     "capture-origin: PRE_SEC_NONSECURE_EL2\\n",
     "caller-security-state: NONSECURE\\n",
     "caller-exception-level: EL2\\n",
-    "route-authorization-input: EXPLICIT_CALLER_ASSERTION_NOT_INDEPENDENTLY_ATTESTED\\n",
+    "route-authorization-input: BOUND_SINGLE_USE_TOKEN\\n",
     "vendor-or-sip-smc-action: NONE\\n",
     "direct-el3-register-read-action: NONE\\n",
     "secure-monitor-modification-action: NONE\\n",
@@ -38,6 +38,9 @@ required_literals = [
 checks = [
     ("emitter-has-all-fixed-schema-and-safety-lines", all(value in source for value in required_literals)),
     ("emitter-binds-six-exact-sha256-values", header.count("Sha256;") == 6 and source.count("IsExactSha256 (Binding->") == 6),
+    ("emitter-binds-route-report-and-token-digest", "route-authorization-report-sha256: " in source and "authorization-binding-sha256: " in source and source.count("AppendDigest (Writer, Capture->") == 2),
+    ("emitter-binds-authorized-output-buffer", "authorized-output-buffer-address: " in source and "authorized-output-buffer-capacity: " in source and "authorized-output-buffer-alignment: " in source),
+    ("emitter-rejects-missing-authorization-binding", "HasValidAuthorizationBinding" in source),
     ("emitter-normalizes-hash-case", "ToLowerHex (Value[Index])" in source),
     ("emitter-allows-only-complete-or-feature-unavailable", "Capture->Outcome == M7SmcccCollectorComplete" in source and "Capture->Outcome == M7SmcccCollectorFeatureUnavailable" in source),
     ("emitter-reconstructs-only-compile-time-fids", "M7_SMCCC_VERSION_FID" in source and "M7_SMCCC_ARCH_FEATURES_FID" in source and source.count("M7_SMCCC_FEATURE_AVAILABILITY_FID") >= 2),
@@ -60,7 +63,7 @@ for name, passed in checks:
     print(f'{name}: {"PASS" if passed else "FAIL"}')
 print()
 print("current-dsc-inf-integration: FORBIDDEN_AND_ABSENT")
-print("device-route-authorization: NOT_PROVEN")
+print("device-route-authorization: BOUND_TOKEN_PROPAGATED_NOT_CRYPTOGRAPHICALLY_ATTESTED")
 print("launch-authorization: NO")
 if failed:
     print("classification: M7_SMCCC_TRANSCRIPT_EMITTER_SOURCE_CONTRACT_BLOCKED")

@@ -102,7 +102,7 @@ int main(void)
   ResetAuthorization(&Token, &Expectation);
   State = AuthorizedEl2(NULL, &Expectation);
   assert(M7CollectSmcccFeatureAvailability(&State, FakeInvoke, &Fake, &Capture) == M7SmcccCollectorRouteNotAuthorized);
-  assert(Fake.CallCount == 0 && Capture.CallsIssued == 0);
+  assert(Fake.CallCount == 0 && Capture.CallsIssued == 0 && Capture.AuthorizedOutputBufferAddress == 0);
 
   ResetAuthorization(&Token, &Expectation);
   State = AuthorizedEl2(&Token, &Expectation);
@@ -134,13 +134,18 @@ int main(void)
   assert(M7CollectSmcccFeatureAvailability(&State, FakeInvoke, &Fake, &Capture) == M7SmcccCollectorComplete);
   assert(Fake.CallCount == 5 && Capture.CallsIssued == 5 && Capture.FeatureQueriesIssued == 3);
   assert(Token.Consumed == 1 && Token.InvocationBudget == 0);
+  assert(Capture.AuthorizedOutputBufferAddress == Token.OutputBufferAddress);
+  assert(Capture.AuthorizedOutputBufferCapacity == Token.OutputBufferCapacity);
+  assert(Capture.AuthorizedOutputBufferAlignment == Token.OutputBufferAlignment);
+  assert(memcmp(Capture.RouteAuthorizationReportSha256, Expectation.RouteAuthorizationReportSha256, M7_SMCCC_ROUTE_DIGEST_SIZE) == 0);
+  assert(memcmp(Capture.AuthorizationBindingSha256, Expectation.AuthorizationBindingSha256, M7_SMCCC_ROUTE_DIGEST_SIZE) == 0);
   assert(Fake.Fids[0] == M7_SMCCC_VERSION_FID && Fake.Args[0] == 0);
   assert(Fake.Fids[1] == M7_SMCCC_ARCH_FEATURES_FID && Fake.Args[1] == M7_SMCCC_FEATURE_AVAILABILITY_FID);
   assert(Fake.Fids[2] == M7_SMCCC_FEATURE_AVAILABILITY_FID && Fake.Args[2] == M7_SMCCC_SCR_EL3_OPCODE);
   assert(Fake.Fids[3] == M7_SMCCC_FEATURE_AVAILABILITY_FID && Fake.Args[3] == M7_SMCCC_CPTR_EL3_OPCODE);
   assert(Fake.Fids[4] == M7_SMCCC_FEATURE_AVAILABILITY_FID && Fake.Args[4] == M7_SMCCC_MDCR_EL3_OPCODE);
   assert(M7CollectSmcccFeatureAvailability(&State, FakeInvoke, &Fake, &Capture) == M7SmcccCollectorRouteNotAuthorized);
-  assert(Fake.CallCount == 5 && Capture.CallsIssued == 0);
+  assert(Fake.CallCount == 5 && Capture.CallsIssued == 0 && Capture.AuthorizedOutputBufferAddress == 0);
 
   ResetAuthorization(&Token, &Expectation);
   State = AuthorizedEl2(&Token, &Expectation);

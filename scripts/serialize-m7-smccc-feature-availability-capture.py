@@ -8,6 +8,7 @@ HANDOFF = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("out/m7-secure-el3-ha
 CAPTURE = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("out/m7-smccc-collector-capture.txt")
 RAW_OUT = Path(sys.argv[3]) if len(sys.argv) > 3 else Path("out/m7-smccc-el3-feature-availability-raw.txt")
 REPORT = Path(sys.argv[4]) if len(sys.argv) > 4 else Path("out/m7-smccc-capture-serialization.txt")
+ROUTE_AUTHORIZATION = Path(sys.argv[5]) if len(sys.argv) > 5 else Path("out/m7-pre-sec-smccc-route-authorization.txt")
 
 ROOT = Path(__file__).resolve().parents[1]
 LIB = ROOT / "uefi/Platform/IzzOS/OvaltinePkg/Library/M7SmcccFeatureAvailabilityCollector"
@@ -59,6 +60,11 @@ def decimal_field(text, label):
     return int(value) if value and value.isdigit() else None
 
 
+def hex_field(text, label):
+    value = field(text, label)
+    return int(value, 16) if value and re.fullmatch(r"0x[0-9A-Fa-f]+", value) else None
+
+
 def equal_hash(left, right):
     return bool(left and re.fullmatch(r"[0-9A-Fa-f]{64}", left) and left.lower() == right.lower())
 
@@ -80,14 +86,16 @@ def write_report(lines, exit_code=0):
         raise SystemExit(exit_code)
 
 
-for required in (HANDOFF, CAPTURE, HEADER, SOURCE, TRANSPORT, EMITTER_HEADER, EMITTER_SOURCE):
+for required in (HANDOFF, CAPTURE, ROUTE_AUTHORIZATION, HEADER, SOURCE, TRANSPORT, EMITTER_HEADER, EMITTER_SOURCE):
     if not required.is_file():
         raise SystemExit(f"ERROR: required M7 SMCCC serialization input not found: {required}")
 
 handoff = HANDOFF.read_text(errors="replace")
 capture = CAPTURE.read_text(errors="replace")
+route_authorization = ROUTE_AUTHORIZATION.read_text(errors="replace")
 handoff_hash = sha256(HANDOFF)
 capture_hash = sha256(CAPTURE)
+route_authorization_hash = sha256(ROUTE_AUTHORIZATION)
 component_hashes = {
     "collector-header-sha256": sha256(HEADER),
     "collector-source-sha256": sha256(SOURCE),
@@ -98,6 +106,12 @@ component_hashes = {
 outcome = field(capture, "collector-outcome")
 declared_calls = decimal_field(capture, "calls-issued")
 declared_queries = decimal_field(capture, "feature-queries-issued")
+capture_buffer_address = hex_field(capture, "authorized-output-buffer-address")
+capture_buffer_capacity = hex_field(capture, "authorized-output-buffer-capacity")
+capture_buffer_alignment = hex_field(capture, "authorized-output-buffer-alignment")
+route_buffer_address = hex_field(route_authorization, "output-buffer-address")
+route_buffer_capacity = hex_field(route_authorization, "output-buffer-capacity")
+route_buffer_alignment = hex_field(route_authorization, "output-buffer-alignment")
 
 calls = []
 malformed_calls = []
@@ -125,7 +139,7 @@ common_fields = {
     "capture-origin": "PRE_SEC_NONSECURE_EL2",
     "caller-security-state": "NONSECURE",
     "caller-exception-level": "EL2",
-    "route-authorization-input": "EXPLICIT_CALLER_ASSERTION_NOT_INDEPENDENTLY_ATTESTED",
+    "route-authorization-input": "BOUND_SINGLE_USE_TOKEN",
     "vendor-or-sip-smc-action": "NONE",
     "direct-el3-register-read-action": "NONE",
     "secure-monitor-modification-action": "NONE",
@@ -140,6 +154,15 @@ common_fields = {
 checks = [
     ("handoff-schema-gate-passed", field(handoff, "classification") == "M7_SECURE_EL3_HANDOFF_ASSERTION_SCHEMA_PASS"),
     ("capture-binds-exact-handoff", equal_hash(field(capture, "secure-el3-handoff-report-sha256"), handoff_hash)),
+    ("route-authorization-classification-passed", field(route_authorization, "classification") == "M7_PRE_SEC_SMCCC_ROUTE_AUTHORIZATION_PASS"),
+    ("route-authorization-binding-schema-is-exact", field(route_authorization, "authorization-binding-schema") == "IZZOS_M7_PRE_SEC_SMCCC_AUTHORIZATION_BINDING_V1"),
+    ("route-authorization-permits-one-bound-capture", field(route_authorization, "collector-invocation-authorization") == "EXACTLY_ONCE_FOR_BOUND_CAPTURE_ONLY"),
+    ("route-authorization-review-scope-is-exact", field(route_authorization, "route-authorization-authenticity") == "DECLARED_PROJECT_OWNER_REVIEW_NOT_CRYPTOGRAPHICALLY_ATTESTED" and field(route_authorization, "authorization-scope") == "BOUND_SMCCC_FEATURE_AVAILABILITY_CAPTURE_ONLY"),
+    ("route-authorization-denies-launch-and-writes", field(route_authorization, "payload-launch-authorization") == "NO" and field(route_authorization, "persistent-writes") == "FORBIDDEN" and field(route_authorization, "slot-changes") == "FORBIDDEN"),
+    ("capture-binds-exact-route-authorization-report", equal_hash(field(capture, "route-authorization-report-sha256"), route_authorization_hash)),
+    ("capture-binds-exact-authorization-binding", equal_hash(field(capture, "authorization-binding-sha256"), field(route_authorization, "authorization-binding-sha256"))),
+    ("capture-buffer-matches-route-authorization", None not in (capture_buffer_address, capture_buffer_capacity, capture_buffer_alignment, route_buffer_address, route_buffer_capacity, route_buffer_alignment) and (capture_buffer_address, capture_buffer_capacity, capture_buffer_alignment) == (route_buffer_address, route_buffer_capacity, route_buffer_alignment)),
+    ("capture-buffer-is-bounded-and-aligned", capture_buffer_address is not None and capture_buffer_capacity is not None and capture_buffer_alignment is not None and capture_buffer_address > 0 and 0x1000 <= capture_buffer_capacity <= 0x10000 and capture_buffer_alignment >= 0x40 and capture_buffer_alignment & (capture_buffer_alignment - 1) == 0 and capture_buffer_address % capture_buffer_alignment == 0 and capture_buffer_address + capture_buffer_capacity <= 1 << 64),
     ("capture-has-no-raw-el3-register-fields", FORBIDDEN_RAW_EL3.search(capture) is None),
     ("collector-outcome-is-serializable", outcome in ("COMPLETE", "FEATURE_UNAVAILABLE")),
     ("collector-call-lines-are-well-formed", not malformed_calls),
@@ -149,6 +172,7 @@ checks = [
 
 for label, expected in component_hashes.items():
     checks.append((f"capture-{label}-matches", equal_hash(field(capture, label), expected)))
+    checks.append((f"route-authorization-{label}-matches", equal_hash(field(route_authorization, label), expected)))
 for label, expected in common_fields.items():
     checks.append((f"capture-{label}-is-exact", field(capture, label) == expected))
 
@@ -157,6 +181,11 @@ checks.append(("capture-fields-are-unambiguous", all(len(values(capture, label))
     "collector-outcome",
     "calls-issued",
     "feature-queries-issued",
+    "route-authorization-report-sha256",
+    "authorization-binding-sha256",
+    "authorized-output-buffer-address",
+    "authorized-output-buffer-capacity",
+    "authorized-output-buffer-alignment",
     *component_hashes,
     *common_fields,
 ])))
@@ -217,7 +246,9 @@ report_lines = [
     "Launch commands executed by serializer: NONE",
     "",
     f"secure-el3-handoff-report-sha256: {handoff_hash}",
+    f"route-authorization-report-sha256: {route_authorization_hash}",
     f"collector-capture-sha256: {capture_hash}",
+    f"authorization-binding-sha256: {field(route_authorization, 'authorization-binding-sha256') or 'MISSING'}",
     *[f"{label}: {value}" for label, value in component_hashes.items()],
     f"collector-outcome: {outcome or 'MISSING'}",
     f"observed-call-count: {len(calls)}",
@@ -233,11 +264,12 @@ report_lines = [
 ]
 
 if failed:
+    RAW_OUT.unlink(missing_ok=True)
     write_report(
         report_lines + [
             "raw-manifest-write-action: NONE",
             "classification: M7_SMCCC_CAPTURE_SERIALIZATION_BLOCKED",
-            "decision: the exact handoff/source binding, collector outcome, call count/order, fixed FIDs/opcodes, return status, or no-raw/no-write safety policy failed. No sanitized gate manifest was written.",
+            "decision: the exact handoff, route-authorization report/token digest, source identity, authorized buffer, collector outcome, call count/order, fixed FIDs/opcodes, return status, or no-raw/no-write safety policy failed. No sanitized gate manifest was retained.",
         ],
         1,
     )
@@ -246,6 +278,8 @@ version_result = calls[0]["x0"]
 raw_lines = [
     f"smccc-feature-availability-schema: {RAW_SCHEMA}",
     f"secure-el3-handoff-report-sha256: {handoff_hash}",
+    f"route-authorization-report-sha256: {route_authorization_hash}",
+    f"authorization-binding-sha256: {field(route_authorization, 'authorization-binding-sha256')}",
     f"collector-capture-sha256: {capture_hash}",
     *[f"{label}: {value}" for label, value in component_hashes.items()],
     f"collector-outcome: {outcome}",
@@ -253,6 +287,10 @@ raw_lines = [
     "capture-source: PRE_SEC_NONSECURE_EL2_SMCCC_ARCHITECTURE_SERVICE",
     "caller-security-state: NONSECURE",
     "caller-exception-level: EL2",
+    "capture-route-authorization: BOUND_SINGLE_USE_TOKEN_TO_DECLARED_PROJECT_REVIEW",
+    f"authorized-output-buffer-address: 0x{capture_buffer_address:X}",
+    f"authorized-output-buffer-capacity: 0x{capture_buffer_capacity:X}",
+    f"authorized-output-buffer-alignment: 0x{capture_buffer_alignment:X}",
     "smccc-conduit: SMC",
     "smccc-service-owner: ARM_ARCHITECTURE_SERVICE_OEN_0",
     f"smccc-version-fid: 0x{VERSION_FID:X}",

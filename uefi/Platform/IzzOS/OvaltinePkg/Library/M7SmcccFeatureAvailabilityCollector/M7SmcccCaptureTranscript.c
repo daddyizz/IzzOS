@@ -84,6 +84,33 @@ HasCanonicalQueryStorage (
 }
 
 static int
+HasValidAuthorizationBinding (
+  const M7_SMCCC_CAPTURE *Capture
+  )
+{
+  uint32_t Index;
+  uint8_t ReportCombined;
+  uint8_t BindingCombined;
+
+  ReportCombined = 0;
+  BindingCombined = 0;
+  for (Index = 0; Index < M7_SMCCC_ROUTE_DIGEST_SIZE; ++Index) {
+    ReportCombined |= Capture->RouteAuthorizationReportSha256[Index];
+    BindingCombined |= Capture->AuthorizationBindingSha256[Index];
+  }
+  if (ReportCombined == 0 || BindingCombined == 0 ||
+      Capture->AuthorizedOutputBufferAddress == 0 ||
+      Capture->AuthorizedOutputBufferCapacity < M7_SMCCC_ROUTE_MIN_BUFFER_CAPACITY ||
+      Capture->AuthorizedOutputBufferCapacity > M7_SMCCC_ROUTE_MAX_BUFFER_CAPACITY ||
+      Capture->AuthorizedOutputBufferAlignment < M7_SMCCC_ROUTE_MIN_BUFFER_ALIGNMENT ||
+      (Capture->AuthorizedOutputBufferAlignment & (Capture->AuthorizedOutputBufferAlignment - 1)) != 0 ||
+      Capture->AuthorizedOutputBufferAddress % Capture->AuthorizedOutputBufferAlignment != 0) {
+    return 0;
+  }
+  return Capture->AuthorizedOutputBufferAddress <= UINT64_MAX - Capture->AuthorizedOutputBufferCapacity;
+}
+
+static int
 IsSerializableCapture (
   const M7_SMCCC_CAPTURE *Capture
   )
@@ -91,6 +118,7 @@ IsSerializableCapture (
   uint32_t Index;
 
   if (!IsSerializableSmcccVersion (Capture->SmcccVersionResult) ||
+      !HasValidAuthorizationBinding (Capture) ||
       !HasCanonicalQueryStorage (Capture)) {
     return 0;
   }
@@ -160,6 +188,21 @@ AppendSha256 (
 
   for (Index = 0; Index < M7_SMCCC_SHA256_HEX_LENGTH; ++Index) {
     AppendCharacter (Writer, ToLowerHex (Value[Index]));
+  }
+}
+
+static void
+AppendDigest (
+  TRANSCRIPT_WRITER *Writer,
+  const uint8_t Digest[M7_SMCCC_ROUTE_DIGEST_SIZE]
+  )
+{
+  static const char Digits[] = "0123456789abcdef";
+  uint32_t Index;
+
+  for (Index = 0; Index < M7_SMCCC_ROUTE_DIGEST_SIZE; ++Index) {
+    AppendCharacter (Writer, Digits[Digest[Index] >> 4]);
+    AppendCharacter (Writer, Digits[Digest[Index] & UINT8_C(0xF)]);
   }
 }
 
@@ -262,10 +305,25 @@ RenderTranscript (
   AppendBindingLine (Writer, "collector-transport-sha256", Binding->CollectorTransportSha256);
   AppendBindingLine (Writer, "transcript-emitter-header-sha256", Binding->TranscriptEmitterHeaderSha256);
   AppendBindingLine (Writer, "transcript-emitter-source-sha256", Binding->TranscriptEmitterSourceSha256);
+  AppendText (Writer, "route-authorization-report-sha256: ");
+  AppendDigest (Writer, Capture->RouteAuthorizationReportSha256);
+  AppendCharacter (Writer, '\n');
+  AppendText (Writer, "authorization-binding-sha256: ");
+  AppendDigest (Writer, Capture->AuthorizationBindingSha256);
+  AppendCharacter (Writer, '\n');
+  AppendText (Writer, "authorized-output-buffer-address: ");
+  AppendHex (Writer, Capture->AuthorizedOutputBufferAddress);
+  AppendCharacter (Writer, '\n');
+  AppendText (Writer, "authorized-output-buffer-capacity: ");
+  AppendHex (Writer, Capture->AuthorizedOutputBufferCapacity);
+  AppendCharacter (Writer, '\n');
+  AppendText (Writer, "authorized-output-buffer-alignment: ");
+  AppendHex (Writer, Capture->AuthorizedOutputBufferAlignment);
+  AppendCharacter (Writer, '\n');
   AppendText (Writer, "capture-origin: PRE_SEC_NONSECURE_EL2\n");
   AppendText (Writer, "caller-security-state: NONSECURE\n");
   AppendText (Writer, "caller-exception-level: EL2\n");
-  AppendText (Writer, "route-authorization-input: EXPLICIT_CALLER_ASSERTION_NOT_INDEPENDENTLY_ATTESTED\n");
+  AppendText (Writer, "route-authorization-input: BOUND_SINGLE_USE_TOKEN\n");
   AppendText (Writer, "collector-outcome: ");
   AppendText (Writer, Capture->Outcome == M7SmcccCollectorComplete ? "COMPLETE\n" : "FEATURE_UNAVAILABLE\n");
   AppendText (Writer, "calls-issued: ");

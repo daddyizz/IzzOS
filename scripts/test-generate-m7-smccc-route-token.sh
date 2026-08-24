@@ -118,6 +118,9 @@ int main(void)
   State.RouteAuthorizationExpectation = &gIzzOSM7SmcccRouteAuthorizationExpectation;
   assert(M7CollectSmcccFeatureAvailability(&State, FakeInvoke, &Fake, &Capture) == M7SmcccCollectorComplete);
   assert(Fake.CallCount == 5);
+  assert(Capture.AuthorizedOutputBufferAddress == gIzzOSM7SmcccRouteAuthorizationExpectation.OutputBufferAddress);
+  assert(Capture.RouteAuthorizationReportSha256[0] == gIzzOSM7SmcccRouteAuthorizationExpectation.RouteAuthorizationReportSha256[0]);
+  assert(Capture.AuthorizationBindingSha256[0] == gIzzOSM7SmcccRouteAuthorizationExpectation.AuthorizationBindingSha256[0]);
   assert(gIzzOSM7SmcccRouteAuthorizationToken.InvocationBudget == 0);
   assert(gIzzOSM7SmcccRouteAuthorizationToken.Consumed == 1);
   assert(M7CollectSmcccFeatureAvailability(&State, FakeInvoke, &Fake, &Capture) == M7SmcccCollectorRouteNotAuthorized);

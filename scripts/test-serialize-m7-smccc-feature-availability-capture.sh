@@ -30,6 +30,28 @@ SOURCE_SHA="$(sha256sum "$LIB/M7SmcccFeatureAvailabilityCollector.c" | awk '{pri
 TRANSPORT_SHA="$(sha256sum "$LIB/M7SmcccCallAArch64.S" | awk '{print $1}')"
 EMITTER_HEADER_SHA="$(sha256sum "$LIB/M7SmcccCaptureTranscript.h" | awk '{print $1}')"
 EMITTER_SOURCE_SHA="$(sha256sum "$LIB/M7SmcccCaptureTranscript.c" | awk '{print $1}')"
+BINDING_SHA="$(printf 'm7-serializer-authorization-binding' | sha256sum | awk '{print $1}')"
+
+cat > "$TMP/route-authorization.txt" <<EOF
+collector-header-sha256: $HEADER_SHA
+collector-source-sha256: $SOURCE_SHA
+collector-transport-sha256: $TRANSPORT_SHA
+transcript-emitter-header-sha256: $EMITTER_HEADER_SHA
+transcript-emitter-source-sha256: $EMITTER_SOURCE_SHA
+authorization-binding-schema: IZZOS_M7_PRE_SEC_SMCCC_AUTHORIZATION_BINDING_V1
+authorization-binding-sha256: $BINDING_SHA
+output-buffer-address: 0x90000000
+output-buffer-capacity: 0x1000
+output-buffer-alignment: 0x1000
+route-authorization-authenticity: DECLARED_PROJECT_OWNER_REVIEW_NOT_CRYPTOGRAPHICALLY_ATTESTED
+authorization-scope: BOUND_SMCCC_FEATURE_AVAILABILITY_CAPTURE_ONLY
+payload-launch-authorization: NO
+persistent-writes: FORBIDDEN
+slot-changes: FORBIDDEN
+collector-invocation-authorization: EXACTLY_ONCE_FOR_BOUND_CAPTURE_ONLY
+classification: M7_PRE_SEC_SMCCC_ROUTE_AUTHORIZATION_PASS
+EOF
+ROUTE_SHA="$(sha256sum "$TMP/route-authorization.txt" | awk '{print $1}')"
 
 write_capture() {
   local path="$1" outcome="$2" calls="$3" queries="$4"
@@ -41,10 +63,15 @@ collector-source-sha256: $SOURCE_SHA
 collector-transport-sha256: $TRANSPORT_SHA
 transcript-emitter-header-sha256: $EMITTER_HEADER_SHA
 transcript-emitter-source-sha256: $EMITTER_SOURCE_SHA
+route-authorization-report-sha256: $ROUTE_SHA
+authorization-binding-sha256: $BINDING_SHA
+authorized-output-buffer-address: 0x90000000
+authorized-output-buffer-capacity: 0x1000
+authorized-output-buffer-alignment: 0x1000
 capture-origin: PRE_SEC_NONSECURE_EL2
 caller-security-state: NONSECURE
 caller-exception-level: EL2
-route-authorization-input: EXPLICIT_CALLER_ASSERTION_NOT_INDEPENDENTLY_ATTESTED
+route-authorization-input: BOUND_SINGLE_USE_TOKEN
 collector-outcome: $outcome
 calls-issued: $calls
 feature-queries-issued: $queries
@@ -70,12 +97,15 @@ collector-call: index=4 fid=0xC0000003 arg1=0x1E1320 x0=0x0 x1=0x0
 EOF
 
 serialize() {
-  local capture="$1" raw="$2" report="$3" handoff="${4:-$TMP/handoff.txt}"
-  "$PYTHON" "$SERIALIZE" "$handoff" "$capture" "$raw" "$report"
+  local capture="$1" raw="$2" report="$3" handoff="${4:-$TMP/handoff.txt}" route="${5:-$TMP/route-authorization.txt}"
+  "$PYTHON" "$SERIALIZE" "$handoff" "$capture" "$raw" "$report" "$route"
 }
 
 serialize "$TMP/supported-capture.txt" "$TMP/supported-raw.txt" "$TMP/supported-report.txt" >/dev/null
 grep -q '^capture-binds-exact-handoff: PASS$' "$TMP/supported-report.txt"
+grep -q '^capture-binds-exact-route-authorization-report: PASS$' "$TMP/supported-report.txt"
+grep -q '^capture-binds-exact-authorization-binding: PASS$' "$TMP/supported-report.txt"
+grep -q '^capture-buffer-matches-route-authorization: PASS$' "$TMP/supported-report.txt"
 grep -q '^complete-outcome-has-five-calls: PASS$' "$TMP/supported-report.txt"
 grep -q '^raw-el3-register-disclosure: FORBIDDEN$' "$TMP/supported-report.txt"
 grep -q '^classification: M7_SMCCC_CAPTURE_SERIALIZATION_PASS$' "$TMP/supported-report.txt"
@@ -123,6 +153,15 @@ assert_blocked wrong-source-hash \
 assert_blocked wrong-emitter-source-hash \
   "s/transcript-emitter-source-sha256: $EMITTER_SOURCE_SHA/transcript-emitter-source-sha256: 0000000000000000000000000000000000000000000000000000000000000000/" \
   capture-transcript-emitter-source-sha256-matches
+assert_blocked wrong-route-report-hash \
+  "s/route-authorization-report-sha256: $ROUTE_SHA/route-authorization-report-sha256: 0000000000000000000000000000000000000000000000000000000000000000/" \
+  capture-binds-exact-route-authorization-report
+assert_blocked wrong-authorization-binding \
+  "s/authorization-binding-sha256: $BINDING_SHA/authorization-binding-sha256: 0000000000000000000000000000000000000000000000000000000000000000/" \
+  capture-binds-exact-authorization-binding
+assert_blocked wrong-authorized-buffer \
+  's/authorized-output-buffer-address: 0x90000000/authorized-output-buffer-address: 0x90001000/' \
+  capture-buffer-matches-route-authorization
 assert_blocked wrong-fid \
   's/index=1 fid=0x80000001/index=1 fid=0x82000001/' \
   discovery-call-is-exact-success
@@ -153,5 +192,32 @@ if serialize "$TMP/supported-capture.txt" "$TMP/tampered-raw.txt" "$TMP/tampered
 fi
 grep -q '^capture-binds-exact-handoff: FAIL$' "$TMP/tampered-report.txt"
 test ! -e "$TMP/tampered-raw.txt"
+
+cp "$TMP/route-authorization.txt" "$TMP/tampered-route.txt"
+printf X >> "$TMP/tampered-route.txt"
+if serialize "$TMP/supported-capture.txt" "$TMP/tampered-route-raw.txt" "$TMP/tampered-route-report.txt" "$TMP/handoff.txt" "$TMP/tampered-route.txt" >/dev/null 2>&1; then
+  echo "ERROR: serializer accepted a tampered route-authorization report" >&2
+  exit 1
+fi
+grep -q '^capture-binds-exact-route-authorization-report: FAIL$' "$TMP/tampered-route-report.txt"
+test ! -e "$TMP/tampered-route-raw.txt"
+
+sed 's/payload-launch-authorization: NO/payload-launch-authorization: YES/' "$TMP/route-authorization.txt" > "$TMP/launch-route.txt"
+if serialize "$TMP/supported-capture.txt" "$TMP/launch-route-raw.txt" "$TMP/launch-route-report.txt" "$TMP/handoff.txt" "$TMP/launch-route.txt" >/dev/null 2>&1; then
+  echo "ERROR: serializer accepted a payload-launch-authorizing route" >&2
+  exit 1
+fi
+grep -q '^route-authorization-denies-launch-and-writes: FAIL$' "$TMP/launch-route-report.txt"
+test ! -e "$TMP/launch-route-raw.txt"
+
+cp "$TMP/supported-raw.txt" "$TMP/stale-raw.txt"
+sed "s/authorization-binding-sha256: $BINDING_SHA/authorization-binding-sha256: 0000000000000000000000000000000000000000000000000000000000000000/" \
+  "$TMP/supported-capture.txt" > "$TMP/stale-capture.txt"
+if serialize "$TMP/stale-capture.txt" "$TMP/stale-raw.txt" "$TMP/stale-report.txt" >/dev/null 2>&1; then
+  echo "ERROR: serializer accepted an invalid capture over a stale raw manifest" >&2
+  exit 1
+fi
+test ! -e "$TMP/stale-raw.txt"
+grep -q '^raw-manifest-write-action: NONE$' "$TMP/stale-report.txt"
 
 echo "PASS: M7 deterministic SMCCC capture serializer round trip"

@@ -45,6 +45,8 @@ checks.extend(
         ("collector-consumes-token-before-first-smc", consume_index >= 0 and first_call_index >= 0 and consume_index < first_call_index),
         ("collector-zeroes-invocation-budget-on-consume", "Token->InvocationBudget = 0;" in source),
         ("collector-rejects-token-replay", "Token->Consumed != 0" in source),
+        ("collector-copies-token-binding-into-capture", "BindAuthorizationToCapture" in source and "Capture->RouteAuthorizationReportSha256[Index] = Token->RouteAuthorizationReportSha256[Index]" in source and "Capture->AuthorizationBindingSha256[Index] = Token->AuthorizationBindingSha256[Index]" in source),
+        ("collector-copies-authorized-buffer-into-capture", "Capture->AuthorizedOutputBufferAddress = Token->OutputBufferAddress" in source and "Capture->AuthorizedOutputBufferCapacity = Token->OutputBufferCapacity" in source and "Capture->AuthorizedOutputBufferAlignment = Token->OutputBufferAlignment" in source),
         ("collector-has-explicit-nonsecure-el2-gate", "CallerState->CallerExceptionLevel != M7_SMCCC_EXPECTED_CALLER_EL" in source and "CallerState->CallerIsNonSecure != 1" in source),
         ("collector-discovers-before-feature-queries", source.find("Invoke (\n    M7_SMCCC_ARCH_FEATURES_FID") < source.find("Invoke (\n      M7_SMCCC_FEATURE_AVAILABILITY_FID")),
         ("collector-stops-on-version-unavailable", "M7SmcccCollectorVersionUnavailable" in source),

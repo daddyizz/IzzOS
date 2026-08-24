@@ -115,6 +115,11 @@ typedef struct {
   uint32_t FeatureQueriesIssued;
   uint64_t SmcccVersionResult;
   uint64_t FeatureDiscoveryResult;
+  uint64_t AuthorizedOutputBufferAddress;
+  uint64_t AuthorizedOutputBufferCapacity;
+  uint64_t AuthorizedOutputBufferAlignment;
+  uint8_t RouteAuthorizationReportSha256[M7_SMCCC_ROUTE_DIGEST_SIZE];
+  uint8_t AuthorizationBindingSha256[M7_SMCCC_ROUTE_DIGEST_SIZE];
   M7_SMCCC_FEATURE_QUERY FeatureQueries[M7_SMCCC_MAX_FEATURE_QUERIES];
 } M7_SMCCC_CAPTURE;
 
