@@ -258,6 +258,27 @@ M7_AARCH64_EXTENSION_BIT_ASSESSMENT_DEFERRED_SECURE_EL3_EVIDENCE
 
 This is not full upstream system-register compliance. Both results remain bound to a self-reported snapshot; Secure EL3 prerequisites, unassessed extensions, cross-core `CNTVOFF_EL2`/`ZCR_EL2`/`SMCR_EL2` consistency, independent authenticity, capture-route authorization, wrapper implementation, DSC/FDF promotion, MMIO and launch remain unproven and unauthorized.
 
+## AArch64 cross-core register consistency gate
+
+Validate a future read-only rendezvous inventory against both the exact primary-CPU register report and the enabled CPU affinity set parsed from the exact selected DTB:
+
+```bash
+python3 scripts/verify-m7-aarch64-cross-core-registers.py \
+  out/m7-aarch64-extension-registers.txt \
+  out/m7-selected-dtb.txt \
+  out/vendor-boot-dtb-set/dtb-1.dtb \
+  out/m7-aarch64-cross-core-registers-raw.txt \
+  out/m7-aarch64-cross-core-registers.txt
+```
+
+Schema `IZZOS_M7_AARCH64_CROSS_CORE_REGISTERS_V1` carries one canonical record per enabled DTB CPU. The verifier masks non-affinity `MPIDR_EL1` bits, rejects missing, extra, duplicate or out-of-order affinities, and requires every record's `CNTFRQ_EL0`, `CNTVOFF_EL2`, `ZCR_EL2` and `SMCR_EL2` state to match the exact primary snapshot where the feature is present. This implements the bounded cross-CPU consistency requirements from the upstream [AArch64 Linux boot contract](https://www.kernel.org/doc/html/latest/arch/arm64/booting.html). A complete and internally consistent result is:
+
+```text
+M7_AARCH64_CROSS_CORE_REGISTER_CONSISTENCY_PASS
+```
+
+The classification validates topology coverage and the four represented register states only. It does not independently attest the snapshot or prove coherency-domain membership, Secure EL3 state, capture-route safety, wrapper execution, DSC/FDF promotion, MMIO or launch.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
@@ -265,7 +286,7 @@ The following remain separate evidence gates:
 - actual FD size and alignment from a concrete SEC/PEI/DXE composition;
 - final runtime destination and FD base, plus exact Qualcomm FD-for-kernel replacement/relocation behavior beyond the bounded stock Linux arithmetic;
 - independently authenticated Qualcomm entry observation and capture route beyond the schema-only snapshot gate;
-- Secure EL3 extension-state evidence for an EL2 entry, cross-core consistency and verified execution of the required SEC/PrePi wrapper beyond the conditional bit assessment;
+- Secure EL3 extension-state evidence for an EL2 entry, coherency-domain evidence and verified execution of the required SEC/PrePi wrapper beyond the bounded cross-core register assessment;
 - runtime GIC/timer/platform-init ownership and exception-level requirements beyond the bounded static-DTB enumeration;
 - exact temporary Android boot-container construction only after the input-binding gate and Qualcomm semantics both pass;
 - recovery and exact-device route authorization.
