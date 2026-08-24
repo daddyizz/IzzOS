@@ -52,6 +52,8 @@ make_inputs "$TMP/pass"
   "$TMP/pass/uefiplat.cfg" \
   "$TMP/pass/layout.txt" >/dev/null
 grep -q '^cfg-hash-matches-geometry: PASS$' "$TMP/pass/layout.txt"
+grep -q '^m6-stock-page-size-is-valid: PASS$' "$TMP/pass/layout.txt"
+grep -q '^proven-stock-page-size: 0x1000$' "$TMP/pass/layout.txt"
 grep -q '^kernel-region-does-not-overlap-other-cfg-regions: PASS$' "$TMP/pass/layout.txt"
 grep -q '^classification: M7_LAYOUT_REGION_CONTRACT_PASS$' "$TMP/pass/layout.txt"
 

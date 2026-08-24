@@ -42,6 +42,7 @@ ksize = grab('KernelSize')
 kend = grab('KernelEndAddr')
 ramdisk = grab('RamdiskLoadAddr')
 dtb = grab('DeviceTreeLoadAddr')
+page_size = grab('page-size')
 
 region_matches = list(
     re.finditer(
@@ -90,6 +91,7 @@ checks.append(('configured-regions-have-valid-geometry', not invalid_regions))
 checks.append(('kernel-base-matches-cfg', kbase == cfg_base))
 checks.append(('kernel-size-matches-cfg', ksize == cfg_size))
 checks.append(('kernel-end-consistent', kend == kbase + ksize))
+checks.append(('m6-stock-page-size-is-valid', 4096 <= page_size <= 65536 and not page_size & (page_size - 1)))
 checks.append(('dtb-inside-kernel-region', kbase <= dtb < kend))
 checks.append(('ramdisk-inside-kernel-region', kbase <= ramdisk < kend))
 checks.append(('dtb-before-ramdisk', dtb < ramdisk))
@@ -113,6 +115,7 @@ lines = [
     f'proven-kernel-region-end: 0x{kend:08X}',
     f'proven-stock-dtb-load: 0x{dtb:08X}',
     f'proven-stock-ramdisk-load: 0x{ramdisk:08X}',
+    f'proven-stock-page-size: 0x{page_size:X}',
     f'geometry-cfg-sha256: {cfg_hash_from_geometry or "MISSING"}',
     f'actual-cfg-sha256: {sha256(CFG)}',
 ]

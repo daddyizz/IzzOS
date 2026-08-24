@@ -47,12 +47,31 @@ M7_LAYOUT_REGION_CONTRACT_PASS
 
 This result authorizes only host-side construction and validation work. It does not authorize a device launch.
 
+## Actual FD capacity check
+
+After a real standalone FD artifact exists, validate its actual bytes rather than a configured estimate:
+
+```bash
+python3 scripts/verify-m7-fd-capacity.py \
+  out/m7-layout-contract.txt \
+  out/ovaltine-standalone/Ovaltine.fd \
+  out/m7-fd-capacity.txt
+```
+
+The verifier hashes the FD, checks that its real size is aligned to the exact stock page size recorded by M6, and ensures its aligned size does not cross the exact stock DTB load bound. A successful result is:
+
+```text
+M7_FD_CAPACITY_CONTRACT_PASS
+```
+
+This is a capacity result only. It deliberately does not choose the FD base or claim that the bootloader will enter the artifact.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
 
 - actual FD size and alignment from a concrete SEC/PEI/DXE composition;
-- FD base derived from that concrete image, not an arbitrary window;
+- FD base and Android container behavior derived from exact boot-chain evidence, not an arbitrary window;
 - AArch64 entry and exception-level contract;
 - GIC/timer/platform-init requirements;
 - exact temporary Android boot-container behavior;
