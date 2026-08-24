@@ -88,6 +88,25 @@ M7_EXACT_SELECTED_DTB_BOUND
 
 This binds the DTB input for later platform analysis. It does not prove that static DTB MMIO values are sufficient for standalone initialization.
 
+## Bound-DTB GIC and timer evidence
+
+After the selected DTB binding passes, enumerate the architectural interrupt-controller and timer properties from those exact bytes:
+
+```bash
+python3 scripts/verify-m7-gic-timer-dtb.py \
+  out/m7-selected-dtb.txt \
+  out/vendor-boot-dtb-set/dtb-1.dtb \
+  out/m7-gic-timer-dtb.txt
+```
+
+The verifier requires the DTB hash to match an `M7_EXACT_SELECTED_DTB_BOUND` artifact. It then requires one enabled `arm,gic-v3` interrupt controller with three or four interrupt cells and at least two structured register entries, plus one enabled `arm,armv8-timer` node with at least two complete interrupt specifiers. These bounds follow the upstream Devicetree schemas while leaving runtime initialization separately blocked. A successful enumeration is:
+
+```text
+M7_GIC_TIMER_DTB_EVIDENCE_ENUMERATED
+```
+
+This classification records source bytes and raw DTB properties only. It does not authorize copying static addresses into firmware PCDs, touching MMIO, assuming the boot exception level, or claiming that GIC/timer state survives the Android boot chain.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
@@ -95,7 +114,7 @@ The following remain separate evidence gates:
 - actual FD size and alignment from a concrete SEC/PEI/DXE composition;
 - FD base and Android container behavior derived from exact boot-chain evidence, not an arbitrary window;
 - AArch64 entry and exception-level contract;
-- GIC/timer/platform-init requirements derived from an `M7_EXACT_SELECTED_DTB_BOUND` artifact;
+- runtime GIC/timer/platform-init ownership and exception-level requirements beyond the bounded static-DTB enumeration;
 - exact temporary Android boot-container behavior;
 - recovery and exact-device route authorization.
 

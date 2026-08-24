@@ -72,6 +72,9 @@ jobs:
       - name: Test M7 exact selected-DTB binding
         run: bash scripts/test-verify-m7-selected-dtb.sh
 
+      - name: Test M7 bound-DTB GIC and timer evidence
+        run: bash scripts/test-verify-m7-gic-timer-dtb.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 
