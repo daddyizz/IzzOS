@@ -84,6 +84,9 @@ jobs:
       - name: Test M7 exact LinuxLoader placement evidence binding
         run: bash scripts/test-verify-m7-linuxloader-placement-evidence.sh
 
+      - name: Test M7 standalone SEC entry requirement binding
+        run: bash scripts/test-verify-m7-standalone-sec-entry-requirements.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 

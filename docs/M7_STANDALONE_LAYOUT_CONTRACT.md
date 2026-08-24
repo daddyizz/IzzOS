@@ -175,13 +175,34 @@ M7_EXACT_LINUXLOADER_PLACEMENT_EVIDENCE_BOUND
 
 This binds the stock Linux-kernel placement arithmetic only. It does not prove the final runtime destination or that a standalone FD can replace an AArch64 Linux Image while satisfying Qualcomm entry, relocation, cache/MMU and security-state expectations. FD-base selection, container construction and launch remain unauthorized.
 
+## Standalone SEC entry requirement binding
+
+Bind the exact stock Linux handoff, LinuxLoader placement, selected DTB, and static GIC/timer evidence into one deliberately non-authorizing SEC/PrePi requirement manifest:
+
+```bash
+python3 scripts/verify-m7-standalone-sec-entry-requirements.py \
+  out/m7-aarch64-entry-contract.txt \
+  out/m7-linuxloader-placement-evidence.txt \
+  out/m7-selected-dtb.txt \
+  out/m7-gic-timer-dtb.txt \
+  out/m7-standalone-sec-entry-requirements.txt
+```
+
+The verifier binds the boot and DTB hashes across all prerequisite reports and preserves their denial policies. It records the upstream [AArch64 Linux boot contract](https://www.kernel.org/doc/html/latest/arch/arm64/booting.html): `x0` carries the DTB, `x1`–`x3` are zero, execution is non-secure EL2 or EL1, DAIF is masked, the MMU is off, the instruction cache may be on or off without stale image entries, and the loaded image is clean to the point of coherency. It separately records that an EDK2 platform firmware volume is patched to its [SEC/PrePi entrypoint](https://github.com/tianocore/edk2-platforms/blob/master/Platform/ARM/JunoPkg/ArmJuno.fdf), rather than assuming a raw FD is a Linux Image. A successful result is:
+
+```text
+M7_STANDALONE_SEC_ENTRY_REQUIREMENTS_BOUND
+```
+
+This is a requirements result, not entry-equivalence proof. It requires a wrapper to capture `CurrentEL`, SCTLR/cache/MMU, DAIF and timer state; preserve the DTB register; establish a stack and temporary RAM; and normalize image coherency before SEC/PrePi. Until those observations and the final runtime destination are independently bound, direct FD substitution, DSC/FDF promotion, MMIO initialization, container construction and launch remain forbidden.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
 
 - actual FD size and alignment from a concrete SEC/PEI/DXE composition;
 - final runtime destination and FD base, plus exact Qualcomm FD-for-kernel replacement/relocation behavior beyond the bounded stock Linux arithmetic;
-- observed Qualcomm entry EL/system-register state and a standalone SEC entry contract beyond the enumerated stock Linux handoff;
+- observed Qualcomm entry EL/system-register/timer state and verified execution of the required SEC/PrePi wrapper beyond the bound requirement manifest;
 - runtime GIC/timer/platform-init ownership and exception-level requirements beyond the bounded static-DTB enumeration;
 - exact temporary Android boot-container construction only after the input-binding gate and Qualcomm semantics both pass;
 - recovery and exact-device route authorization.
