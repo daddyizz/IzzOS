@@ -196,13 +196,33 @@ M7_STANDALONE_SEC_ENTRY_REQUIREMENTS_BOUND
 
 This is a requirements result, not entry-equivalence proof. It requires a wrapper to capture `CurrentEL`, SCTLR/cache/MMU, DAIF and timer state; preserve the DTB register; establish a stack and temporary RAM; and normalize image coherency before SEC/PrePi. Until those observations and the final runtime destination are independently bound, direct FD substitution, DSC/FDF promotion, MMIO initialization, container construction and launch remain forbidden.
 
+## Qualcomm entry observation schema gate
+
+Validate a future pre-SEC register snapshot against the exact requirement manifest:
+
+```bash
+python3 scripts/verify-m7-qualcomm-entry-observation.py \
+  out/m7-standalone-sec-entry-requirements.txt \
+  out/m7-qualcomm-entry-observation-raw.txt \
+  out/m7-qualcomm-entry-observation.txt
+```
+
+The raw snapshot must use schema `IZZOS_M7_QUALCOMM_ENTRY_V1` and bind the exact requirement-report, boot, LinuxLoader and selected-DTB hashes. It records the primary CPU's non-secure `CurrentEL`, matching `SCTLR_EL1` or `SCTLR_EL2`, `x0`–`x3`, DAIF, CNTFRQ, CNTVOFF, image coherency and secondary-CPU state. The verifier requires `x0` to match the stock DTB address, `x1`–`x3` to be zero, all DAIF masks to be set, the MMU to be off, CNTFRQ to be non-zero and CNTVOFF to be zero. A structurally consistent result is:
+
+```text
+M7_QUALCOMM_ENTRY_OBSERVATION_SCHEMA_PASS
+```
+
+This classification is intentionally limited to schema and consistency validation. The snapshot remains self-reported rather than independently attested, and the capture route is not authorized by this gate. Extension-specific system registers, SEC equivalence, wrapper implementation, DSC/FDF promotion, MMIO, container construction and launch remain separately blocked.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
 
 - actual FD size and alignment from a concrete SEC/PEI/DXE composition;
 - final runtime destination and FD base, plus exact Qualcomm FD-for-kernel replacement/relocation behavior beyond the bounded stock Linux arithmetic;
-- observed Qualcomm entry EL/system-register/timer state and verified execution of the required SEC/PrePi wrapper beyond the bound requirement manifest;
+- independently authenticated Qualcomm entry observation and capture route beyond the schema-only snapshot gate;
+- extension-specific system-register requirements and verified execution of the required SEC/PrePi wrapper;
 - runtime GIC/timer/platform-init ownership and exception-level requirements beyond the bounded static-DTB enumeration;
 - exact temporary Android boot-container construction only after the input-binding gate and Qualcomm semantics both pass;
 - recovery and exact-device route authorization.

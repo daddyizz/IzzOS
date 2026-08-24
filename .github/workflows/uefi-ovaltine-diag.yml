@@ -87,6 +87,9 @@ jobs:
       - name: Test M7 standalone SEC entry requirement binding
         run: bash scripts/test-verify-m7-standalone-sec-entry-requirements.sh
 
+      - name: Test M7 Qualcomm entry observation schema gate
+        run: bash scripts/test-verify-m7-qualcomm-entry-observation.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 

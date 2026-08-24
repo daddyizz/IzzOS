@@ -27,6 +27,10 @@ def equal_hash(left, right):
     return valid_hash(left) and valid_hash(right) and left.lower() == right.lower()
 
 
+def valid_hex(value):
+    return bool(value and re.fullmatch(r"0x[0-9A-Fa-f]+", value))
+
+
 def emit(lines, exit_code=0):
     text = "\n".join(lines) + "\n"
     OUT.parent.mkdir(parents=True, exist_ok=True)
@@ -50,6 +54,8 @@ placement_boot_hash = field(placement, "boot-sha256")
 selected_hash = field(selected_dtb, "selected-dtb-sha256")
 gic_bound_hash = field(gic_timer, "bound-selected-dtb-sha256")
 gic_actual_hash = field(gic_timer, "actual-selected-dtb-sha256")
+linuxloader_hash = field(placement, "linuxloader-sha256")
+stock_dtb_address = field(entry, "stock-dtb-load-address")
 
 checks = [
     ("stock-aarch64-entry-contract-pass", field(entry, "classification") == "M7_STOCK_AARCH64_LINUX_ENTRY_CONTRACT_ENUMERATED"),
@@ -58,6 +64,8 @@ checks = [
     ("gic-timer-dtb-evidence-pass", field(gic_timer, "classification") == "M7_GIC_TIMER_DTB_EVIDENCE_ENUMERATED"),
     ("placement-targets-exact-device-build", field(placement, "exact-device-build") == TARGET_BUILD),
     ("entry-and-placement-boot-hashes-match", equal_hash(entry_boot_hash, placement_boot_hash)),
+    ("placement-carries-exact-linuxloader-hash", valid_hash(linuxloader_hash)),
+    ("entry-carries-stock-dtb-address", valid_hex(stock_dtb_address)),
     ("selected-and-gic-bound-dtb-hashes-match", equal_hash(selected_hash, gic_bound_hash)),
     ("selected-and-gic-actual-dtb-hashes-match", equal_hash(selected_hash, gic_actual_hash)),
     ("linux-x0-x3-contract-is-explicit", field(entry, "source-linux-entry-register-contract") == "x0=DTB_PHYSICAL_ADDRESS,x1=0,x2=0,x3=0"),
@@ -91,7 +99,9 @@ lines = [
     f"selected-dtb-report: {SELECTED_DTB}",
     f"gic-timer-report: {GIC_TIMER}",
     f"boot-sha256: {entry_boot_hash or 'MISSING'}",
+    f"linuxloader-sha256: {linuxloader_hash or 'MISSING'}",
     f"selected-dtb-sha256: {selected_hash or 'MISSING'}",
+    f"stock-dtb-load-address: {stock_dtb_address or 'MISSING'}",
     "",
     "checks:",
     *[f'{name}: {"PASS" if passed else "FAIL"}' for name, passed in checks],

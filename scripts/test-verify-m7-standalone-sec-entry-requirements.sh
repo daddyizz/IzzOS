@@ -9,9 +9,11 @@ trap 'rm -rf "$TMP"' EXIT
 
 BOOT_SHA="$(printf 'boot-m7-sec' | sha256sum | awk '{print $1}')"
 DTB_SHA="$(printf 'dtb-m7-sec' | sha256sum | awk '{print $1}')"
+LOADER_SHA="$(printf 'linuxloader-m7-sec' | sha256sum | awk '{print $1}')"
 
 cat > "$TMP/entry.txt" <<EOF
 actual-boot-sha256: $BOOT_SHA
+stock-dtb-load-address: 0x80100000
 source-linux-entry-register-contract: x0=DTB_PHYSICAL_ADDRESS,x1=0,x2=0,x3=0
 source-linux-entry-security-contract: NON_SECURE
 source-linux-entry-el-contract: EL2_RECOMMENDED_OR_EL1
@@ -28,6 +30,7 @@ EOF
 cat > "$TMP/placement.txt" <<EOF
 exact-device-build: CPH2413_15.0.0.1901(EX01)
 boot-sha256: $BOOT_SHA
+linuxloader-sha256: $LOADER_SHA
 final-physical-destination: NOT_RUNTIME_OBSERVED
 fd-kernel-substitution-equivalence: NOT_PROVEN
 standalone-sec-entry-equivalence: NOT_PROVEN
@@ -58,6 +61,8 @@ run_verify() {
 run_verify "$TMP/pass.txt" >/dev/null
 grep -q '^entry-and-placement-boot-hashes-match: PASS$' "$TMP/pass.txt"
 grep -q '^selected-and-gic-bound-dtb-hashes-match: PASS$' "$TMP/pass.txt"
+grep -q "^linuxloader-sha256: $LOADER_SHA$" "$TMP/pass.txt"
+grep -q '^stock-dtb-load-address: 0x80100000$' "$TMP/pass.txt"
 grep -q '^source-linux-instruction-cache-contract: MAY_BE_ON_OR_OFF_NO_STALE_IMAGE_ENTRIES$' "$TMP/pass.txt"
 grep -q '^edk2-entry-wrapper-required: YES$' "$TMP/pass.txt"
 grep -q '^direct-fd-as-linux-image: FORBIDDEN$' "$TMP/pass.txt"
