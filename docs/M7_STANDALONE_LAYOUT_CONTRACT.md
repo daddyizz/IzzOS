@@ -107,13 +107,32 @@ M7_GIC_TIMER_DTB_EVIDENCE_ENUMERATED
 
 This classification records source bytes and raw DTB properties only. It does not authorize copying static addresses into firmware PCDs, touching MMIO, assuming the boot exception level, or claiming that GIC/timer state survives the Android boot chain.
 
+## Exact-stock AArch64 Linux entry contract
+
+Bind the exact `boot.img` bytes to the M7 layout and validate both the Android v4 container header and the embedded 64-byte AArch64 Linux Image header:
+
+```bash
+python3 scripts/verify-m7-aarch64-entry-contract.py \
+  out/m7-layout-contract.txt \
+  output/boot.img \
+  out/m7-aarch64-entry-contract.txt
+```
+
+The verifier checks the M6-carried `boot.img` hash, Android header v4 geometry, AArch64 magic/reserved fields/flags, `text_offset`, `image_size`, the 2 MiB placement relationship, and the exact pre-DTB capacity bound. A successful result is:
+
+```text
+M7_STOCK_AARCH64_LINUX_ENTRY_CONTRACT_ENUMERATED
+```
+
+The resulting report records the upstream Linux handoff requirements: `x0` carries the DTB address, `x1`–`x3` are zero, execution is non-secure EL2 or EL1, interrupts are masked, and the MMU is off. Those are source requirements, not observations of the Qualcomm handoff. The actual entry EL, system-register state and equivalence of a standalone EDK2 SEC entry remain unproven.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
 
 - actual FD size and alignment from a concrete SEC/PEI/DXE composition;
 - FD base and Android container behavior derived from exact boot-chain evidence, not an arbitrary window;
-- AArch64 entry and exception-level contract;
+- observed Qualcomm entry EL/system-register state and a standalone SEC entry contract beyond the enumerated stock Linux handoff;
 - runtime GIC/timer/platform-init ownership and exception-level requirements beyond the bounded static-DTB enumeration;
 - exact temporary Android boot-container behavior;
 - recovery and exact-device route authorization.

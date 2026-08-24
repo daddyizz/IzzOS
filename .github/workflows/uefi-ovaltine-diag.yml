@@ -75,6 +75,9 @@ jobs:
       - name: Test M7 bound-DTB GIC and timer evidence
         run: bash scripts/test-verify-m7-gic-timer-dtb.sh
 
+      - name: Test M7 exact-stock AArch64 Linux entry contract
+        run: bash scripts/test-verify-m7-aarch64-entry-contract.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 
