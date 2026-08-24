@@ -786,6 +786,39 @@ M7_GOVERNANCE_ROOT_RECOVERY_EVENT_PASS_REPUBLICATION_REQUIRED
 
 This result validates supplied cryptographic evidence only. It does not alter a trust store, prove external private-key custody or make the recovered checkpoint globally current. The recovered checkpoint still requires fresh independent republication and witness quorum before distributed trust can move to it. No device command, wrapper execution, promotion, container construction or launch is authorized.
 
+## Recovered-checkpoint republication quorum gate
+
+Validate that the exact recovered checkpoint has been republished promptly under the replacement root and independently witnessed, without changing repository or device trust state:
+
+```bash
+python3 scripts/verify-m7-recovered-checkpoint-republication.py \
+  out/m7-governance-root-recovery-event-verification.txt \
+  out/m7-governance-root-recovery-event.txt \
+  out/m7-governance-root-recovery-checkpoint.txt \
+  out/m7-replacement-governance-root-manifest.txt \
+  out/m7-replacement-governance-root-public-key.pem \
+  out/m7-recovered-checkpoint-republication.txt \
+  out/m7-republication-witness-1-public-key.pem \
+  out/m7-republication-witness-1-signature.bin \
+  out/m7-republication-witness-2-public-key.pem \
+  out/m7-republication-witness-2-signature.bin \
+  out/m7-republication-witness-3-public-key.pem \
+  out/m7-republication-witness-3-signature.bin \
+  out/m7-replacement-root-republication-signature.bin \
+  2026-08-25T00:08:00Z \
+  out/m7-recovered-checkpoint-republication-verification.txt
+```
+
+Canonical schema `IZZOS_M7_RECOVERED_CHECKPOINT_REPUBLICATION_V1` binds the exact passing recovery report, root-recovery event, recovered checkpoint, replacement-root manifest/key, revoked old-root state and new epoch/sequence. The replacement root must sign the complete record, and at least two of three distinct pinned republication witnesses must independently sign those same bytes within the 900-second republication window.
+
+Changed checkpoint bytes, an unpinned or reused witness key, fewer than two valid witness signatures, a rogue replacement-root signature, an expired record, rollback of epoch or sequence, duplicate fields or any signed write/launch claim fail closed. A consistent supplied republication is classified:
+
+```text
+M7_RECOVERED_CHECKPOINT_REPUBLICATION_QUORUM_PASS_EXTERNAL_DISTRIBUTION_REQUIRED
+```
+
+This result proves quorum over the supplied record only. It cannot discover a newer checkpoint that was withheld, prove durable external distribution or authorize device activity. Independent distribution and monitoring remain operational responsibilities; no device command, key write, wrapper execution, promotion, container construction or launch is performed.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
