@@ -126,6 +126,9 @@ jobs:
       - name: Test M7 bound SMCCC capture orchestrator
         run: bash scripts/test-m7-smccc-capture-orchestrator.sh
 
+      - name: Test M7 deterministic bound SMCCC capture provisioning
+        run: bash scripts/test-generate-m7-smccc-capture-provision.sh
+
       - name: Test M7 deterministic SMCCC capture serializer round trip
         run: bash scripts/test-serialize-m7-smccc-feature-availability-capture.sh
 

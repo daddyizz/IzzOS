@@ -81,7 +81,7 @@ def digest_initializer(value, indentation="    "):
 def write_report(lines, exit_code=0):
     rendered = "\n".join(lines) + "\n"
     REPORT.parent.mkdir(parents=True, exist_ok=True)
-    REPORT.write_text(rendered)
+    REPORT.write_text(rendered, newline="\n")
     print(rendered, end="")
     if exit_code:
         raise SystemExit(exit_code)
@@ -248,8 +248,8 @@ const M7_SMCCC_ROUTE_AUTHORIZATION_EXPECTATION gIzzOSM7SmcccRouteAuthorizationEx
 
 HEADER_OUT.parent.mkdir(parents=True, exist_ok=True)
 SOURCE_OUT.parent.mkdir(parents=True, exist_ok=True)
-HEADER_OUT.write_text(header_rendered)
-SOURCE_OUT.write_text(source_rendered)
+HEADER_OUT.write_text(header_rendered, newline="\n")
+SOURCE_OUT.write_text(source_rendered, newline="\n")
 header_hash = hashlib.sha256(header_rendered.encode()).hexdigest()
 source_hash = hashlib.sha256(source_rendered.encode()).hexdigest()
 

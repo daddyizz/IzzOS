@@ -454,6 +454,32 @@ M7_SMCCC_CAPTURE_ORCHESTRATOR_SOURCE_CONTRACT_PASS
 
 This source contract makes the future call sequence explicit but does not authenticate the physical-device route, integrate the real transport, authorize MMIO or grant payload-launch permission.
 
+## Deterministic bound-capture provisioning
+
+Generate the exact transcript binding and wrapper that join a passing handoff report, passing route authorization and the already generated single-use token artifacts to the orchestrator:
+
+```bash
+python3 scripts/generate-m7-smccc-capture-provision.py \
+  out/m7-secure-el3-handoff-state.txt \
+  out/m7-pre-sec-smccc-route-authorization.txt \
+  out/generated/M7SmcccRouteAuthorizationProvision.h \
+  out/generated/M7SmcccRouteAuthorizationProvision.c \
+  out/m7-smccc-route-token-generation.txt \
+  out/generated/M7SmcccCaptureProvision.h \
+  out/generated/M7SmcccCaptureProvision.c \
+  out/m7-smccc-capture-provisioning.txt
+```
+
+The generator recalculates the exact handoff and route-report hashes, all seven runtime component hashes, and the actual token header/source hashes. It requires the token-generation report to bind those same bytes and to retain the one-capture, verified-recovery, no-launch/no-write policy. It then emits an eight-hash `M7_SMCCC_TRANSCRIPT_BINDING` plus `M7RunProvisionedSmcccFeatureAvailabilityCapture`, which supplies only that binding and the exact generated token/expectation to the fail-closed orchestrator. The real transport remains caller-supplied and is never generated or selected.
+
+Output uses fixed LF bytes so the hashes recorded in both generation reports match the artifacts on Windows and Linux. Repeated generation is byte-identical. Tests reject altered handoff classification, relaxed route policy, changed runtime component, edited token source/report and duplicate authorization fields; failed generation removes stale capture-provision outputs. On Linux, the C harness maps only a temporary process buffer at the fixture address and runs supported, unsupported and replay paths through a fake transport. A complete host-side result is:
+
+```text
+M7_SMCCC_CAPTURE_PROVISIONING_PASS
+```
+
+Generated token and capture-provision sources remain under `out/generated`, absent from the DSC/INF and unusable with the current blocked physical-device evidence. This step performs no SMC, device command, persistent write, MMIO initialization or payload launch.
+
 ## Deterministic collector-capture serializer
 
 Convert a future collector transcript into the sanitized manifest consumed by the SMCCC route gate:

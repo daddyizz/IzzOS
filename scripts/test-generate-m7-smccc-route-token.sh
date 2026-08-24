@@ -72,6 +72,8 @@ grep -q '^  .OutputBufferAddress = UINT64_C(0x90000000),$' "$SOURCE_OUT"
 grep -q '^  .OutputBufferCapacity = UINT64_C(0x1000),$' "$SOURCE_OUT"
 grep -q '^generated-header-write-action: WRITTEN$' "$REPORT_OUT"
 grep -q '^generated-source-write-action: WRITTEN$' "$REPORT_OUT"
+grep -q "^generated-header-sha256: $(sha256sum "$HEADER_OUT" | awk '{print $1}')$" "$REPORT_OUT"
+grep -q "^generated-source-sha256: $(sha256sum "$SOURCE_OUT" | awk '{print $1}')$" "$REPORT_OUT"
 grep -q '^payload-launch-authorization: NO$' "$REPORT_OUT"
 grep -q '^classification: M7_SMCCC_ROUTE_TOKEN_PROVISIONING_PASS$' "$REPORT_OUT"
 
