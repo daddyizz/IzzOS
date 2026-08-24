@@ -78,6 +78,9 @@ jobs:
       - name: Test M7 exact-stock AArch64 Linux entry contract
         run: bash scripts/test-verify-m7-aarch64-entry-contract.sh
 
+      - name: Test M7 exact Android container input binding
+        run: bash scripts/test-verify-m7-android-container-inputs.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 

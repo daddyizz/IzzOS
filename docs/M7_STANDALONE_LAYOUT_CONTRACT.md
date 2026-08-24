@@ -126,15 +126,39 @@ M7_STOCK_AARCH64_LINUX_ENTRY_CONTRACT_ENUMERATED
 
 The resulting report records the upstream Linux handoff requirements: `x0` carries the DTB address, `x1`–`x3` are zero, execution is non-secure EL2 or EL1, interrupts are masked, and the MMU is off. Those are source requirements, not observations of the Qualcomm handoff. The actual entry EL, system-register state and equivalence of a standalone EDK2 SEC entry remain unproven.
 
+## Exact Android container input binding
+
+Once the layout, capacity, selected-DTB and entry reports plus the actual FD exist, bind their exact bytes into one input-only evidence chain:
+
+```bash
+python3 scripts/verify-m7-android-container-inputs.py \
+  out/m7-layout-contract.txt \
+  out/m7-fd-capacity.txt \
+  out/m7-selected-dtb.txt \
+  out/m7-aarch64-entry-contract.txt \
+  out/ovaltine-standalone/Ovaltine.fd \
+  output/boot.img \
+  output/vendor_boot.img \
+  out/m7-android-container-inputs.txt
+```
+
+The verifier requires every prerequisite gate to pass while continuing to deny launch. It cross-checks the exact FD size/hash, the M6-carried and downstream `boot.img` and `vendor_boot.img` hashes, the exact device build, Android boot header v4, vendor boot header v4, and the stock page size. A successful result is:
+
+```text
+M7_ANDROID_CONTAINER_INPUTS_BOUND
+```
+
+This classification deliberately does not construct or repack an image. It authorizes no kernel replacement, vendor-boot modification, AVB bypass, fastboot command, persistent write, slot change, or launch. The Qualcomm container replacement/relocation semantics, FD base and route authorization remain separate evidence gates.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
 
 - actual FD size and alignment from a concrete SEC/PEI/DXE composition;
-- FD base and Android container behavior derived from exact boot-chain evidence, not an arbitrary window;
+- FD base and exact Qualcomm Android-container replacement/relocation behavior derived from boot-chain evidence, not an arbitrary window;
 - observed Qualcomm entry EL/system-register state and a standalone SEC entry contract beyond the enumerated stock Linux handoff;
 - runtime GIC/timer/platform-init ownership and exception-level requirements beyond the bounded static-DTB enumeration;
-- exact temporary Android boot-container behavior;
+- exact temporary Android boot-container construction only after the input-binding gate and Qualcomm semantics both pass;
 - recovery and exact-device route authorization.
 
 Storage writes, slot changes, flashing, and guessed MMIO initialization remain forbidden.
