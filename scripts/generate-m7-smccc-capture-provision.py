@@ -28,6 +28,7 @@ DSC = ROOT / "uefi/Platform/IzzOS/OvaltinePkg/OvaltineDiag.dsc"
 INF = ROOT / "uefi/Platform/IzzOS/OvaltinePkg/Applications/OvaltineDiag/OvaltineDiag.inf"
 
 TARGET_BUILD = "CPH2413_15.0.0.1901(EX01)"
+CAPTURE_PROVISION_BINDING_SCHEMA = "IZZOS_M7_SMCCC_CAPTURE_PROVISION_BINDING_V1"
 ALLOWED_RECOVERY = {
     "SELF_SERVICE_HARD_RECOVERY_VERIFIED",
     "AUTHORIZED_SERVICE_HARD_RECOVERY_VERIFIED",
@@ -120,6 +121,20 @@ address = hex_value(authorization, "output-buffer-address")
 capacity = hex_value(authorization, "output-buffer-capacity")
 alignment = hex_value(authorization, "output-buffer-alignment")
 integration_absent = TOKEN_HEADER.name not in integration and HEADER_OUT.name not in integration and "M7RunProvisionedSmcccFeatureAvailabilityCapture" not in integration and "M7SmcccCaptureOrchestrator" not in integration
+
+capture_provision_binding_lines = [
+    f"capture-provision-binding-schema: {CAPTURE_PROVISION_BINDING_SCHEMA}",
+    f"secure-el3-handoff-report-sha256: {handoff_hash}",
+    f"route-authorization-report-sha256: {authorization_hash}",
+    f"route-token-header-sha256: {token_header_hash}",
+    f"route-token-source-sha256: {token_source_hash}",
+    f"authorization-binding-sha256: {(binding_hash or 'MISSING').lower()}",
+    *[f"{label}: {value}" for label, value in component_hashes.items()],
+    f"output-buffer-address: 0x{address:X}" if address is not None else "output-buffer-address: MISSING",
+    f"output-buffer-capacity: 0x{capacity:X}" if capacity is not None else "output-buffer-capacity: MISSING",
+    f"output-buffer-alignment: 0x{alignment:X}" if alignment is not None else "output-buffer-alignment: MISSING",
+]
+capture_provision_binding_hash = hashlib.sha256(("\n".join(capture_provision_binding_lines) + "\n").encode()).hexdigest()
 
 expected_token_header = ""
 expected_token_source = ""
@@ -241,6 +256,8 @@ report_lines = [
     f"route-token-source-sha256: {token_source_hash}",
     f"authorization-binding-sha256: {binding_hash or 'MISSING'}",
     *[f"{label}: {value}" for label, value in component_hashes.items()],
+    f"capture-provision-binding-schema: {CAPTURE_PROVISION_BINDING_SCHEMA}",
+    f"capture-provision-binding-sha256: {capture_provision_binding_hash}",
     "",
     "checks:",
     *[f'{name}: {"PASS" if passed else "FAIL"}' for name, passed in checks],
@@ -272,6 +289,7 @@ header_rendered = f"""#ifndef IZZOS_GENERATED_M7_SMCCC_CAPTURE_PROVISION_H
 #include "{TOKEN_HEADER.name}"
 
 #define IZZOS_M7_SMCCC_SECURE_EL3_HANDOFF_REPORT_SHA256 "{handoff_hash}"
+#define IZZOS_M7_SMCCC_CAPTURE_PROVISION_BINDING_SHA256 "{capture_provision_binding_hash}"
 
 extern const M7_SMCCC_TRANSCRIPT_BINDING gIzzOSM7SmcccTranscriptBinding;
 
@@ -297,7 +315,8 @@ const M7_SMCCC_TRANSCRIPT_BINDING gIzzOSM7SmcccTranscriptBinding = {{
   .TranscriptEmitterHeaderSha256 = "{component_hashes['transcript-emitter-header-sha256']}",
   .TranscriptEmitterSourceSha256 = "{component_hashes['transcript-emitter-source-sha256']}",
   .CaptureOrchestratorHeaderSha256 = "{component_hashes['capture-orchestrator-header-sha256']}",
-  .CaptureOrchestratorSourceSha256 = "{component_hashes['capture-orchestrator-source-sha256']}"
+  .CaptureOrchestratorSourceSha256 = "{component_hashes['capture-orchestrator-source-sha256']}",
+  .CaptureProvisionBindingSha256 = IZZOS_M7_SMCCC_CAPTURE_PROVISION_BINDING_SHA256
 }};
 
 M7_SMCCC_ORCHESTRATOR_STATUS

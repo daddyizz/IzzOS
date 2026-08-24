@@ -56,6 +56,52 @@ collector-invocation-authorization: EXACTLY_ONCE_FOR_BOUND_CAPTURE_ONLY
 classification: M7_PRE_SEC_SMCCC_ROUTE_AUTHORIZATION_PASS
 EOF
 ROUTE_SHA="$(sha256sum "$TMP/route-authorization.txt" | awk '{print $1}')"
+TOKEN_HEADER_SHA="$(printf 'm7-serializer-route-token-header' | sha256sum | awk '{print $1}')"
+TOKEN_SOURCE_SHA="$(printf 'm7-serializer-route-token-source' | sha256sum | awk '{print $1}')"
+
+cat > "$TMP/provision-binding.txt" <<EOF
+capture-provision-binding-schema: IZZOS_M7_SMCCC_CAPTURE_PROVISION_BINDING_V1
+secure-el3-handoff-report-sha256: $HANDOFF_SHA
+route-authorization-report-sha256: $ROUTE_SHA
+route-token-header-sha256: $TOKEN_HEADER_SHA
+route-token-source-sha256: $TOKEN_SOURCE_SHA
+authorization-binding-sha256: $BINDING_SHA
+collector-header-sha256: $HEADER_SHA
+collector-source-sha256: $SOURCE_SHA
+collector-transport-sha256: $TRANSPORT_SHA
+transcript-emitter-header-sha256: $EMITTER_HEADER_SHA
+transcript-emitter-source-sha256: $EMITTER_SOURCE_SHA
+capture-orchestrator-header-sha256: $ORCHESTRATOR_HEADER_SHA
+capture-orchestrator-source-sha256: $ORCHESTRATOR_SOURCE_SHA
+output-buffer-address: 0x90000000
+output-buffer-capacity: 0x1000
+output-buffer-alignment: 0x1000
+EOF
+PROVISION_BINDING_SHA="$(sha256sum "$TMP/provision-binding.txt" | awk '{print $1}')"
+
+cat > "$TMP/capture-provisioning.txt" <<EOF
+secure-el3-handoff-report-sha256: $HANDOFF_SHA
+route-authorization-report-sha256: $ROUTE_SHA
+route-token-header-sha256: $TOKEN_HEADER_SHA
+route-token-source-sha256: $TOKEN_SOURCE_SHA
+authorization-binding-sha256: $BINDING_SHA
+collector-header-sha256: $HEADER_SHA
+collector-source-sha256: $SOURCE_SHA
+collector-transport-sha256: $TRANSPORT_SHA
+transcript-emitter-header-sha256: $EMITTER_HEADER_SHA
+transcript-emitter-source-sha256: $EMITTER_SOURCE_SHA
+capture-orchestrator-header-sha256: $ORCHESTRATOR_HEADER_SHA
+capture-orchestrator-source-sha256: $ORCHESTRATOR_SOURCE_SHA
+capture-provision-binding-schema: IZZOS_M7_SMCCC_CAPTURE_PROVISION_BINDING_V1
+capture-provision-binding-sha256: $PROVISION_BINDING_SHA
+current-dsc-inf-integration: FORBIDDEN_AND_ABSENT
+real-transport-selection: CALLER_SUPPLIED_NOT_GENERATED
+payload-launch-authorization: NO
+persistent-writes: FORBIDDEN
+slot-changes: FORBIDDEN
+classification: M7_SMCCC_CAPTURE_PROVISIONING_PASS
+EOF
+PROVISION_REPORT_SHA="$(sha256sum "$TMP/capture-provisioning.txt" | awk '{print $1}')"
 
 write_capture() {
   local path="$1" outcome="$2" calls="$3" queries="$4"
@@ -71,6 +117,7 @@ capture-orchestrator-header-sha256: $ORCHESTRATOR_HEADER_SHA
 capture-orchestrator-source-sha256: $ORCHESTRATOR_SOURCE_SHA
 route-authorization-report-sha256: $ROUTE_SHA
 authorization-binding-sha256: $BINDING_SHA
+capture-provision-binding-sha256: $PROVISION_BINDING_SHA
 authorized-output-buffer-address: 0x90000000
 authorized-output-buffer-capacity: 0x1000
 authorized-output-buffer-alignment: 0x1000
@@ -103,19 +150,24 @@ collector-call: index=4 fid=0xC0000003 arg1=0x1E1320 x0=0x0 x1=0x0
 EOF
 
 serialize() {
-  local capture="$1" raw="$2" report="$3" handoff="${4:-$TMP/handoff.txt}" route="${5:-$TMP/route-authorization.txt}"
-  "$PYTHON" "$SERIALIZE" "$handoff" "$capture" "$raw" "$report" "$route"
+  local capture="$1" raw="$2" report="$3" handoff="${4:-$TMP/handoff.txt}" route="${5:-$TMP/route-authorization.txt}" provision="${6:-$TMP/capture-provisioning.txt}"
+  "$PYTHON" "$SERIALIZE" "$handoff" "$capture" "$raw" "$report" "$route" "$provision"
 }
 
 serialize "$TMP/supported-capture.txt" "$TMP/supported-raw.txt" "$TMP/supported-report.txt" >/dev/null
 grep -q '^capture-binds-exact-handoff: PASS$' "$TMP/supported-report.txt"
 grep -q '^capture-binds-exact-route-authorization-report: PASS$' "$TMP/supported-report.txt"
 grep -q '^capture-binds-exact-authorization-binding: PASS$' "$TMP/supported-report.txt"
+grep -q '^capture-binds-exact-provisioning: PASS$' "$TMP/supported-report.txt"
+grep -q '^capture-provisioning-binding-is-canonical: PASS$' "$TMP/supported-report.txt"
 grep -q '^capture-buffer-matches-route-authorization: PASS$' "$TMP/supported-report.txt"
 grep -q '^complete-outcome-has-five-calls: PASS$' "$TMP/supported-report.txt"
 grep -q '^raw-el3-register-disclosure: FORBIDDEN$' "$TMP/supported-report.txt"
 grep -q '^classification: M7_SMCCC_CAPTURE_SERIALIZATION_PASS$' "$TMP/supported-report.txt"
 grep -q '^capture-serialization: DETERMINISTIC_COLLECTOR_TRANSCRIPT_V1$' "$TMP/supported-raw.txt"
+grep -q '^capture-provisioning: DETERMINISTIC_BOUND_ORCHESTRATOR_PROVISION_V1$' "$TMP/supported-raw.txt"
+grep -q "^capture-provisioning-report-sha256: $PROVISION_REPORT_SHA$" "$TMP/supported-raw.txt"
+grep -q "^capture-provision-binding-sha256: $PROVISION_BINDING_SHA$" "$TMP/supported-raw.txt"
 grep -q '^smccc-feature-query: register=SCR_EL3 opcode=0x1E1100 status=SUCCESS availability-mask=0x4010000$' "$TMP/supported-raw.txt"
 if grep -q '^scr-el3:' "$TMP/supported-raw.txt"; then
   echo "ERROR: serializer disclosed a raw SCR_EL3 value" >&2
@@ -125,7 +177,7 @@ fi
 serialize "$TMP/supported-capture.txt" "$TMP/supported-raw-2.txt" "$TMP/supported-report-2.txt" >/dev/null
 cmp "$TMP/supported-raw.txt" "$TMP/supported-raw-2.txt"
 
-"$PYTHON" "$VERIFY" "$TMP/handoff.txt" "$TMP/supported-raw.txt" "$TMP/supported-gate.txt" "$TMP/route-authorization.txt" >/dev/null
+"$PYTHON" "$VERIFY" "$TMP/handoff.txt" "$TMP/supported-raw.txt" "$TMP/supported-gate.txt" "$TMP/route-authorization.txt" "$TMP/capture-provisioning.txt" >/dev/null
 grep -q '^classification: M7_SMCCC_EL3_FEATURE_AVAILABILITY_CORROBORATION_PASS$' "$TMP/supported-gate.txt"
 
 write_capture "$TMP/unsupported-capture.txt" FEATURE_UNAVAILABLE 2 0
@@ -137,7 +189,7 @@ serialize "$TMP/unsupported-capture.txt" "$TMP/unsupported-raw.txt" "$TMP/unsupp
 grep -q '^classification: M7_SMCCC_CAPTURE_SERIALIZATION_PASS$' "$TMP/unsupported-report.txt"
 grep -q '^feature-availability-support: NOT_SUPPORTED$' "$TMP/unsupported-raw.txt"
 grep -q '^feature-query-count: 0$' "$TMP/unsupported-raw.txt"
-"$PYTHON" "$VERIFY" "$TMP/handoff.txt" "$TMP/unsupported-raw.txt" "$TMP/unsupported-gate.txt" "$TMP/route-authorization.txt" >/dev/null
+"$PYTHON" "$VERIFY" "$TMP/handoff.txt" "$TMP/unsupported-raw.txt" "$TMP/unsupported-gate.txt" "$TMP/route-authorization.txt" "$TMP/capture-provisioning.txt" >/dev/null
 grep -q '^classification: M7_SMCCC_EL3_FEATURE_AVAILABILITY_ROUTE_UNSUPPORTED$' "$TMP/unsupported-gate.txt"
 
 assert_blocked() {
@@ -165,6 +217,9 @@ assert_blocked wrong-route-report-hash \
 assert_blocked wrong-authorization-binding \
   "s/authorization-binding-sha256: $BINDING_SHA/authorization-binding-sha256: 0000000000000000000000000000000000000000000000000000000000000000/" \
   capture-binds-exact-authorization-binding
+assert_blocked wrong-provision-binding \
+  "s/capture-provision-binding-sha256: $PROVISION_BINDING_SHA/capture-provision-binding-sha256: 0000000000000000000000000000000000000000000000000000000000000000/" \
+  capture-binds-exact-provisioning
 assert_blocked wrong-authorized-buffer \
   's/authorized-output-buffer-address: 0x90000000/authorized-output-buffer-address: 0x90001000/' \
   capture-buffer-matches-route-authorization
@@ -215,6 +270,22 @@ if serialize "$TMP/supported-capture.txt" "$TMP/launch-route-raw.txt" "$TMP/laun
 fi
 grep -q '^route-authorization-denies-launch-and-writes: FAIL$' "$TMP/launch-route-report.txt"
 test ! -e "$TMP/launch-route-raw.txt"
+
+sed 's/payload-launch-authorization: NO/payload-launch-authorization: YES/' "$TMP/capture-provisioning.txt" > "$TMP/launch-provision.txt"
+if serialize "$TMP/supported-capture.txt" "$TMP/launch-provision-raw.txt" "$TMP/launch-provision-report.txt" "$TMP/handoff.txt" "$TMP/route-authorization.txt" "$TMP/launch-provision.txt" >/dev/null 2>&1; then
+  echo "ERROR: serializer accepted a payload-launch-authorizing capture provision" >&2
+  exit 1
+fi
+grep -q '^capture-provisioning-denies-integration-launch-and-writes: FAIL$' "$TMP/launch-provision-report.txt"
+test ! -e "$TMP/launch-provision-raw.txt"
+
+sed "s/capture-provision-binding-sha256: $PROVISION_BINDING_SHA/capture-provision-binding-sha256: 0000000000000000000000000000000000000000000000000000000000000000/" "$TMP/capture-provisioning.txt" > "$TMP/forged-provision.txt"
+if serialize "$TMP/supported-capture.txt" "$TMP/forged-provision-raw.txt" "$TMP/forged-provision-report.txt" "$TMP/handoff.txt" "$TMP/route-authorization.txt" "$TMP/forged-provision.txt" >/dev/null 2>&1; then
+  echo "ERROR: serializer accepted a forged capture-provision binding" >&2
+  exit 1
+fi
+grep -q '^capture-provisioning-binding-is-canonical: FAIL$' "$TMP/forged-provision-report.txt"
+test ! -e "$TMP/forged-provision-raw.txt"
 
 cp "$TMP/supported-raw.txt" "$TMP/stale-raw.txt"
 sed "s/authorization-binding-sha256: $BINDING_SHA/authorization-binding-sha256: 0000000000000000000000000000000000000000000000000000000000000000/" \

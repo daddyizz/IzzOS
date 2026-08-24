@@ -348,10 +348,11 @@ python3 scripts/verify-m7-smccc-el3-feature-availability.py \
   out/m7-secure-el3-handoff-state.txt \
   out/m7-smccc-el3-feature-availability-raw.txt \
   out/m7-smccc-el3-feature-availability.txt \
-  out/m7-pre-sec-smccc-route-authorization.txt
+  out/m7-pre-sec-smccc-route-authorization.txt \
+  out/m7-smccc-capture-provisioning.txt
 ```
 
-The final gate rehashes the exact route-authorization report and all seven collector/transport/emitter/orchestrator source components, then requires the serialized single-use authorization binding and bounded output-buffer geometry to match that report byte-for-byte. It also couples `SUPPORTED` to collector outcome `COMPLETE` and `NOT_SUPPORTED` to `FEATURE_UNAVAILABLE`. This closes the host-side evidence chain without turning the declared project-owner review into cryptographic attestation and without authorizing device launch, MMIO, persistent writes or slot changes.
+The final gate rehashes the exact route-authorization and capture-provisioning reports plus all seven collector/transport/emitter/orchestrator source components. It recomputes the canonical capture-provision binding and requires the serialized report digest, provision binding, single-use authorization binding, and bounded output-buffer geometry to match byte-for-byte. It also couples `SUPPORTED` to collector outcome `COMPLETE` and `NOT_SUPPORTED` to `FEATURE_UNAVAILABLE`. This closes the host-side evidence chain without turning the declared project-owner review into cryptographic attestation and without authorizing device launch, MMIO, persistent writes or slot changes.
 
 Schema `IZZOS_M7_SMCCC_EL3_FEATURE_AVAILABILITY_V1` permits only `SMCCC_VERSION` (`0x80000000`), `SMCCC_ARCH_FEATURES` (`0x80000001`), and the SMC64 `SMCCC_ARCH_FEATURE_AVAILABILITY` function (`0xC0000003`) under Arm Architecture Service owner zero. The exact register opcodes are pinned to `SCR_EL3`, `CPTR_EL3`, and `MDCR_EL3`. This follows the upstream [TF-A Arm Architecture Service implementation](https://github.com/ARM-software/arm-trusted-firmware/blob/master/services/arm_arch_svc/arm_arch_svc_setup.c) and its [identifier/mask definitions](https://github.com/ARM-software/arm-trusted-firmware/blob/master/include/services/arm_arch_svc.h).
 
@@ -444,7 +445,7 @@ This is an output-format bridge only. It neither invokes SMC nor proves or autho
 
 `M7SmcccCaptureOrchestrator` is the single fail-closed C entrypoint that joins a provisioned route token, the collector and the deterministic transcript emitter. It remains deliberately absent from `OvaltineDiag.dsc` and `OvaltineDiag.inf`.
 
-Before calling the collector, the orchestrator validates all eight transcript-binding hashes and requires the actual output pointer and capacity to match the immutable route expectation exactly. It constructs the collector caller state internally as non-secure EL2, so callers cannot relax that property through this API. It invokes the collector once, permits transcript emission only for `COMPLETE` or `FEATURE_UNAVAILABLE`, and returns all other collector outcomes without modifying the authorized output buffer. Token replay, changed binding, changed expectation, redirected buffer and query-error paths fail closed.
+Before calling the collector, the orchestrator validates all nine transcript-binding hashes and requires the actual output pointer and capacity to match the immutable route expectation exactly. It constructs the collector caller state internally as non-secure EL2, so callers cannot relax that property through this API. It invokes the collector once, permits transcript emission only for `COMPLETE` or `FEATURE_UNAVAILABLE`, and returns all other collector outcomes without modifying the authorized output buffer. Token replay, changed binding, changed expectation, redirected buffer and query-error paths fail closed.
 
 The orchestrator accepts a transport callback only after those host-provisioned conditions pass; it neither calls `M7SmcccInvokeAArch64` directly nor chooses a real transport. Its host C harness uses a fake transport to cover supported, unsupported, replay, invalid binding, mismatched route digest, redirected buffer and terminal query-error behavior. A static gate also proves the source remains free of direct SMC/system-register instructions, storage/device-write APIs and current diagnostic integration:
 
@@ -470,7 +471,7 @@ python3 scripts/generate-m7-smccc-capture-provision.py \
   out/m7-smccc-capture-provisioning.txt
 ```
 
-The generator recalculates the exact handoff and route-report hashes, all seven runtime component hashes, and the actual token header/source hashes. It requires the token-generation report to bind those same bytes and to retain the one-capture, verified-recovery, no-launch/no-write policy. It then emits an eight-hash `M7_SMCCC_TRANSCRIPT_BINDING` plus `M7RunProvisionedSmcccFeatureAvailabilityCapture`, which supplies only that binding and the exact generated token/expectation to the fail-closed orchestrator. The real transport remains caller-supplied and is never generated or selected.
+The generator recalculates the exact handoff and route-report hashes, all seven runtime component hashes, and the actual token header/source hashes. It requires the token-generation report to bind those same bytes and to retain the one-capture, verified-recovery, no-launch/no-write policy. A canonical `IZZOS_M7_SMCCC_CAPTURE_PROVISION_BINDING_V1` digest covers those inputs and the authorized buffer geometry. The generator emits a nine-hash `M7_SMCCC_TRANSCRIPT_BINDING`—eight source/handoff identities plus that provision digest—and `M7RunProvisionedSmcccFeatureAvailabilityCapture`, which supplies only that binding and the exact generated token/expectation to the fail-closed orchestrator. The real transport remains caller-supplied and is never generated or selected.
 
 Output uses fixed LF bytes so the hashes recorded in both generation reports match the artifacts on Windows and Linux. Repeated generation is byte-identical. Tests reject altered handoff classification, relaxed route policy, changed runtime component, edited token source/report and duplicate authorization fields; failed generation removes stale capture-provision outputs. On Linux, the C harness maps only a temporary process buffer at the fixture address and runs supported, unsupported and replay paths through a fake transport. A complete host-side result is:
 
@@ -490,10 +491,11 @@ python3 scripts/serialize-m7-smccc-feature-availability-capture.py \
   out/m7-smccc-collector-capture.txt \
   out/m7-smccc-el3-feature-availability-raw.txt \
   out/m7-smccc-capture-serialization.txt \
-  out/m7-pre-sec-smccc-route-authorization.txt
+  out/m7-pre-sec-smccc-route-authorization.txt \
+  out/m7-smccc-capture-provisioning.txt
 ```
 
-Schema `IZZOS_M7_SMCCC_COLLECTOR_CAPTURE_V1` binds the exact handoff report, exact route-authorization report, propagated single-use token digest, authorized buffer geometry and SHA-256 identities of the collector header, C state machine, AArch64 transport, emitter header/source and orchestrator header/source. The serializer revalidates that the route report is a one-capture `PASS`, remains non-launching/non-writing, carries the same current source hashes and exactly matches every route/token field in the transcript. It accepts only `COMPLETE` with five canonical calls or `FEATURE_UNAVAILABLE` with the two discovery calls. It rejects version/call errors, reordered or additional calls, changed evidence/source identities, buffer changes, vendor/SiP actions, write/launch claims, and any direct `SCR_EL3`, `CPTR_EL3`, `MDCR_EL3`, GIC, ZCR or SMCR field. A failed serialization removes any stale raw manifest at the exact output path.
+Schema `IZZOS_M7_SMCCC_COLLECTOR_CAPTURE_V1` binds the exact handoff report, exact route-authorization report, canonical capture-provision digest, propagated single-use token digest, authorized buffer geometry and SHA-256 identities of the collector header, C state machine, AArch64 transport, emitter header/source and orchestrator header/source. The serializer revalidates both reports, recomputes the provision binding, and records the exact capture-provisioning report SHA-256 in the sanitized manifest. It accepts only `COMPLETE` with five canonical calls or `FEATURE_UNAVAILABLE` with the two discovery calls. It rejects version/call errors, reordered or additional calls, changed evidence/source identities, report or provision-binding changes, buffer changes, vendor/SiP actions, write/launch claims, and any direct `SCR_EL3`, `CPTR_EL3`, `MDCR_EL3`, GIC, ZCR or SMCR field. A failed serialization removes any stale raw manifest at the exact output path.
 
 The output is deterministic and contains only the normalized feature-availability masks already defined by the Arm service. A successful serializer report is:
 

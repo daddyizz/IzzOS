@@ -76,14 +76,19 @@ CAPTURE_REPORT="$TMP/capture-provisioning.txt"
 generate "$TMP/handoff.txt" "$TMP/authorization.txt" "$TOKEN_HEADER" "$TOKEN_SOURCE" "$TOKEN_REPORT" "$CAPTURE_HEADER" "$CAPTURE_SOURCE" "$CAPTURE_REPORT" >/dev/null
 
 HANDOFF_SHA="$(sha256sum "$TMP/handoff.txt" | awk '{print $1}')"
+PROVISION_BINDING_SHA="$(awk '/^capture-provision-binding-sha256:/ {print $2}' "$CAPTURE_REPORT")"
 grep -q "^#define IZZOS_M7_SMCCC_SECURE_EL3_HANDOFF_REPORT_SHA256 \"$HANDOFF_SHA\"$" "$CAPTURE_HEADER"
+grep -q "^#define IZZOS_M7_SMCCC_CAPTURE_PROVISION_BINDING_SHA256 \"$PROVISION_BINDING_SHA\"$" "$CAPTURE_HEADER"
 grep -q '^#include "M7SmcccRouteAuthorizationProvision.h"$' "$CAPTURE_HEADER"
 grep -q '^extern const M7_SMCCC_TRANSCRIPT_BINDING gIzzOSM7SmcccTranscriptBinding;$' "$CAPTURE_HEADER"
 grep -q '^M7RunProvisionedSmcccFeatureAvailabilityCapture ($' "$CAPTURE_HEADER"
-grep -q "^  .CaptureOrchestratorSourceSha256 = \"$ORCHESTRATOR_SOURCE_SHA\"$" "$CAPTURE_SOURCE"
+grep -q "^  .CaptureOrchestratorSourceSha256 = \"$ORCHESTRATOR_SOURCE_SHA\",$" "$CAPTURE_SOURCE"
+grep -q '^  .CaptureProvisionBindingSha256 = IZZOS_M7_SMCCC_CAPTURE_PROVISION_BINDING_SHA256$' "$CAPTURE_SOURCE"
 grep -q '^           &gIzzOSM7SmcccRouteAuthorizationToken,$' "$CAPTURE_SOURCE"
 grep -q '^           &gIzzOSM7SmcccRouteAuthorizationExpectation,$' "$CAPTURE_SOURCE"
 grep -q '^real-transport-selection: CALLER_SUPPLIED_NOT_GENERATED$' "$CAPTURE_REPORT"
+grep -q '^capture-provision-binding-schema: IZZOS_M7_SMCCC_CAPTURE_PROVISION_BINDING_V1$' "$CAPTURE_REPORT"
+grep -Eq '^capture-provision-binding-sha256: [0-9a-f]{64}$' "$CAPTURE_REPORT"
 grep -q '^capture-provision-is-not-integrated-into-current-diagnostic: PASS$' "$CAPTURE_REPORT"
 grep -q "^generated-header-sha256: $(sha256sum "$CAPTURE_HEADER" | awk '{print $1}')$" "$CAPTURE_REPORT"
 grep -q "^generated-source-sha256: $(sha256sum "$CAPTURE_SOURCE" | awk '{print $1}')$" "$CAPTURE_REPORT"
@@ -190,6 +195,7 @@ main (
   assert(strstr(Buffer, "secure-el3-handoff-report-sha256: " IZZOS_M7_SMCCC_SECURE_EL3_HANDOFF_REPORT_SHA256 "\n") != NULL);
   assert(strstr(Buffer, "route-authorization-report-sha256: " IZZOS_M7_SMCCC_ROUTE_AUTHORIZATION_REPORT_SHA256 "\n") != NULL);
   assert(strstr(Buffer, "authorization-binding-sha256: " IZZOS_M7_SMCCC_AUTHORIZATION_BINDING_SHA256 "\n") != NULL);
+  assert(strstr(Buffer, "capture-provision-binding-sha256: " IZZOS_M7_SMCCC_CAPTURE_PROVISION_BINDING_SHA256 "\n") != NULL);
   CallsAfterFirstRun = Fake.CallCount;
   assert(gIzzOSM7SmcccRouteAuthorizationToken.Consumed == 1);
   assert(M7RunProvisionedSmcccFeatureAvailabilityCapture(FakeInvoke, &Fake, Buffer, 0x1000, &Result) == M7SmcccOrchestratorCollectorRejected);

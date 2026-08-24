@@ -9,6 +9,7 @@ CAPTURE = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("out/m7-smccc-collect
 RAW_OUT = Path(sys.argv[3]) if len(sys.argv) > 3 else Path("out/m7-smccc-el3-feature-availability-raw.txt")
 REPORT = Path(sys.argv[4]) if len(sys.argv) > 4 else Path("out/m7-smccc-capture-serialization.txt")
 ROUTE_AUTHORIZATION = Path(sys.argv[5]) if len(sys.argv) > 5 else Path("out/m7-pre-sec-smccc-route-authorization.txt")
+CAPTURE_PROVISIONING = Path(sys.argv[6]) if len(sys.argv) > 6 else Path("out/m7-smccc-capture-provisioning.txt")
 
 ROOT = Path(__file__).resolve().parents[1]
 LIB = ROOT / "uefi/Platform/IzzOS/OvaltinePkg/Library/M7SmcccFeatureAvailabilityCollector"
@@ -22,6 +23,7 @@ ORCHESTRATOR_SOURCE = LIB / "M7SmcccCaptureOrchestrator.c"
 
 CAPTURE_SCHEMA = "IZZOS_M7_SMCCC_COLLECTOR_CAPTURE_V1"
 RAW_SCHEMA = "IZZOS_M7_SMCCC_EL3_FEATURE_AVAILABILITY_V1"
+CAPTURE_PROVISION_BINDING_SCHEMA = "IZZOS_M7_SMCCC_CAPTURE_PROVISION_BINDING_V1"
 VERSION_FID = 0x80000000
 DISCOVERY_FID = 0x80000001
 AVAILABILITY_FID = 0xC0000003
@@ -71,6 +73,10 @@ def equal_hash(left, right):
     return bool(left and re.fullmatch(r"[0-9A-Fa-f]{64}", left) and left.lower() == right.lower())
 
 
+def valid_nonzero_hash(value):
+    return bool(value and re.fullmatch(r"[0-9A-Fa-f]{64}", value) and int(value, 16) != 0)
+
+
 def valid_version(value):
     return (value >> 16) == 1 and (value & 0xFFFF) >= 1
 
@@ -88,16 +94,18 @@ def write_report(lines, exit_code=0):
         raise SystemExit(exit_code)
 
 
-for required in (HANDOFF, CAPTURE, ROUTE_AUTHORIZATION, HEADER, SOURCE, TRANSPORT, EMITTER_HEADER, EMITTER_SOURCE, ORCHESTRATOR_HEADER, ORCHESTRATOR_SOURCE):
+for required in (HANDOFF, CAPTURE, ROUTE_AUTHORIZATION, CAPTURE_PROVISIONING, HEADER, SOURCE, TRANSPORT, EMITTER_HEADER, EMITTER_SOURCE, ORCHESTRATOR_HEADER, ORCHESTRATOR_SOURCE):
     if not required.is_file():
         raise SystemExit(f"ERROR: required M7 SMCCC serialization input not found: {required}")
 
 handoff = HANDOFF.read_text(errors="replace")
 capture = CAPTURE.read_text(errors="replace")
 route_authorization = ROUTE_AUTHORIZATION.read_text(errors="replace")
+capture_provisioning = CAPTURE_PROVISIONING.read_text(errors="replace")
 handoff_hash = sha256(HANDOFF)
 capture_hash = sha256(CAPTURE)
 route_authorization_hash = sha256(ROUTE_AUTHORIZATION)
+capture_provisioning_hash = sha256(CAPTURE_PROVISIONING)
 component_hashes = {
     "collector-header-sha256": sha256(HEADER),
     "collector-source-sha256": sha256(SOURCE),
@@ -116,6 +124,20 @@ capture_buffer_alignment = hex_field(capture, "authorized-output-buffer-alignmen
 route_buffer_address = hex_field(route_authorization, "output-buffer-address")
 route_buffer_capacity = hex_field(route_authorization, "output-buffer-capacity")
 route_buffer_alignment = hex_field(route_authorization, "output-buffer-alignment")
+provision_binding_hash = field(capture_provisioning, "capture-provision-binding-sha256")
+provision_binding_lines = [
+    f"capture-provision-binding-schema: {CAPTURE_PROVISION_BINDING_SCHEMA}",
+    f"secure-el3-handoff-report-sha256: {handoff_hash}",
+    f"route-authorization-report-sha256: {route_authorization_hash}",
+    f"route-token-header-sha256: {(field(capture_provisioning, 'route-token-header-sha256') or 'MISSING').lower()}",
+    f"route-token-source-sha256: {(field(capture_provisioning, 'route-token-source-sha256') or 'MISSING').lower()}",
+    f"authorization-binding-sha256: {(field(route_authorization, 'authorization-binding-sha256') or 'MISSING').lower()}",
+    *[f"{label}: {value}" for label, value in component_hashes.items()],
+    f"output-buffer-address: 0x{route_buffer_address:X}" if route_buffer_address is not None else "output-buffer-address: MISSING",
+    f"output-buffer-capacity: 0x{route_buffer_capacity:X}" if route_buffer_capacity is not None else "output-buffer-capacity: MISSING",
+    f"output-buffer-alignment: 0x{route_buffer_alignment:X}" if route_buffer_alignment is not None else "output-buffer-alignment: MISSING",
+]
+expected_provision_binding_hash = hashlib.sha256(("\n".join(provision_binding_lines) + "\n").encode()).hexdigest()
 
 calls = []
 malformed_calls = []
@@ -165,6 +187,15 @@ checks = [
     ("route-authorization-denies-launch-and-writes", field(route_authorization, "payload-launch-authorization") == "NO" and field(route_authorization, "persistent-writes") == "FORBIDDEN" and field(route_authorization, "slot-changes") == "FORBIDDEN"),
     ("capture-binds-exact-route-authorization-report", equal_hash(field(capture, "route-authorization-report-sha256"), route_authorization_hash)),
     ("capture-binds-exact-authorization-binding", equal_hash(field(capture, "authorization-binding-sha256"), field(route_authorization, "authorization-binding-sha256"))),
+    ("capture-provisioning-classification-passed", field(capture_provisioning, "classification") == "M7_SMCCC_CAPTURE_PROVISIONING_PASS"),
+    ("capture-provisioning-binding-schema-is-exact", field(capture_provisioning, "capture-provision-binding-schema") == CAPTURE_PROVISION_BINDING_SCHEMA),
+    ("capture-provisioning-binding-is-canonical", valid_nonzero_hash(provision_binding_hash) and equal_hash(provision_binding_hash, expected_provision_binding_hash)),
+    ("capture-binds-exact-provisioning", equal_hash(field(capture, "capture-provision-binding-sha256"), provision_binding_hash)),
+    ("capture-provisioning-binds-exact-handoff", equal_hash(field(capture_provisioning, "secure-el3-handoff-report-sha256"), handoff_hash)),
+    ("capture-provisioning-binds-exact-route-authorization", equal_hash(field(capture_provisioning, "route-authorization-report-sha256"), route_authorization_hash)),
+    ("capture-provisioning-binds-exact-authorization-binding", equal_hash(field(capture_provisioning, "authorization-binding-sha256"), field(route_authorization, "authorization-binding-sha256"))),
+    ("capture-provisioning-token-digests-are-valid", valid_nonzero_hash(field(capture_provisioning, "route-token-header-sha256")) and valid_nonzero_hash(field(capture_provisioning, "route-token-source-sha256"))),
+    ("capture-provisioning-denies-integration-launch-and-writes", field(capture_provisioning, "current-dsc-inf-integration") == "FORBIDDEN_AND_ABSENT" and field(capture_provisioning, "real-transport-selection") == "CALLER_SUPPLIED_NOT_GENERATED" and field(capture_provisioning, "payload-launch-authorization") == "NO" and field(capture_provisioning, "persistent-writes") == "FORBIDDEN" and field(capture_provisioning, "slot-changes") == "FORBIDDEN"),
     ("capture-buffer-matches-route-authorization", None not in (capture_buffer_address, capture_buffer_capacity, capture_buffer_alignment, route_buffer_address, route_buffer_capacity, route_buffer_alignment) and (capture_buffer_address, capture_buffer_capacity, capture_buffer_alignment) == (route_buffer_address, route_buffer_capacity, route_buffer_alignment)),
     ("capture-buffer-is-bounded-and-aligned", capture_buffer_address is not None and capture_buffer_capacity is not None and capture_buffer_alignment is not None and capture_buffer_address > 0 and 0x1000 <= capture_buffer_capacity <= 0x10000 and capture_buffer_alignment >= 0x40 and capture_buffer_alignment & (capture_buffer_alignment - 1) == 0 and capture_buffer_address % capture_buffer_alignment == 0 and capture_buffer_address + capture_buffer_capacity <= 1 << 64),
     ("capture-has-no-raw-el3-register-fields", FORBIDDEN_RAW_EL3.search(capture) is None),
@@ -177,6 +208,7 @@ checks = [
 for label, expected in component_hashes.items():
     checks.append((f"capture-{label}-matches", equal_hash(field(capture, label), expected)))
     checks.append((f"route-authorization-{label}-matches", equal_hash(field(route_authorization, label), expected)))
+    checks.append((f"capture-provisioning-{label}-matches", equal_hash(field(capture_provisioning, label), expected)))
 for label, expected in common_fields.items():
     checks.append((f"capture-{label}-is-exact", field(capture, label) == expected))
 
@@ -187,6 +219,7 @@ checks.append(("capture-fields-are-unambiguous", all(len(values(capture, label))
     "feature-queries-issued",
     "route-authorization-report-sha256",
     "authorization-binding-sha256",
+    "capture-provision-binding-sha256",
     "authorized-output-buffer-address",
     "authorized-output-buffer-capacity",
     "authorized-output-buffer-alignment",
@@ -252,6 +285,9 @@ report_lines = [
     f"secure-el3-handoff-report-sha256: {handoff_hash}",
     f"route-authorization-report-sha256: {route_authorization_hash}",
     f"collector-capture-sha256: {capture_hash}",
+    f"capture-provisioning-report-sha256: {capture_provisioning_hash}",
+    f"capture-provision-binding-schema: {field(capture_provisioning, 'capture-provision-binding-schema') or 'MISSING'}",
+    f"capture-provision-binding-sha256: {provision_binding_hash or 'MISSING'}",
     f"authorization-binding-sha256: {field(route_authorization, 'authorization-binding-sha256') or 'MISSING'}",
     *[f"{label}: {value}" for label, value in component_hashes.items()],
     f"collector-outcome: {outcome or 'MISSING'}",
@@ -273,7 +309,7 @@ if failed:
         report_lines + [
             "raw-manifest-write-action: NONE",
             "classification: M7_SMCCC_CAPTURE_SERIALIZATION_BLOCKED",
-            "decision: the exact handoff, route-authorization report/token digest, source identity, authorized buffer, collector outcome, call count/order, fixed FIDs/opcodes, return status, or no-raw/no-write safety policy failed. No sanitized gate manifest was retained.",
+            "decision: the exact handoff, route authorization, capture-provisioning report/binding, source identity, authorized buffer, collector outcome, call count/order, fixed FIDs/opcodes, return status, or no-raw/no-write safety policy failed. No sanitized gate manifest was retained.",
         ],
         1,
     )
@@ -285,9 +321,12 @@ raw_lines = [
     f"route-authorization-report-sha256: {route_authorization_hash}",
     f"authorization-binding-sha256: {field(route_authorization, 'authorization-binding-sha256')}",
     f"collector-capture-sha256: {capture_hash}",
+    f"capture-provisioning-report-sha256: {capture_provisioning_hash}",
+    f"capture-provision-binding-sha256: {provision_binding_hash}",
     *[f"{label}: {value}" for label, value in component_hashes.items()],
     f"collector-outcome: {outcome}",
     "capture-serialization: DETERMINISTIC_COLLECTOR_TRANSCRIPT_V1",
+    "capture-provisioning: DETERMINISTIC_BOUND_ORCHESTRATOR_PROVISION_V1",
     "capture-source: PRE_SEC_NONSECURE_EL2_SMCCC_ARCHITECTURE_SERVICE",
     "caller-security-state: NONSECURE",
     "caller-exception-level: EL2",

@@ -55,6 +55,52 @@ collector-invocation-authorization: EXACTLY_ONCE_FOR_BOUND_CAPTURE_ONLY
 classification: M7_PRE_SEC_SMCCC_ROUTE_AUTHORIZATION_PASS
 EOF
 ROUTE_SHA="$(sha256sum "$TMP/route-authorization.txt" | awk '{print $1}')"
+TOKEN_HEADER_SHA="$(printf 'm7-final-gate-route-token-header' | sha256sum | awk '{print $1}')"
+TOKEN_SOURCE_SHA="$(printf 'm7-final-gate-route-token-source' | sha256sum | awk '{print $1}')"
+
+cat > "$TMP/provision-binding.txt" <<EOF
+capture-provision-binding-schema: IZZOS_M7_SMCCC_CAPTURE_PROVISION_BINDING_V1
+secure-el3-handoff-report-sha256: $HANDOFF_SHA
+route-authorization-report-sha256: $ROUTE_SHA
+route-token-header-sha256: $TOKEN_HEADER_SHA
+route-token-source-sha256: $TOKEN_SOURCE_SHA
+authorization-binding-sha256: $BINDING_SHA
+collector-header-sha256: $HEADER_SHA
+collector-source-sha256: $SOURCE_SHA
+collector-transport-sha256: $TRANSPORT_SHA
+transcript-emitter-header-sha256: $EMITTER_HEADER_SHA
+transcript-emitter-source-sha256: $EMITTER_SOURCE_SHA
+capture-orchestrator-header-sha256: $ORCHESTRATOR_HEADER_SHA
+capture-orchestrator-source-sha256: $ORCHESTRATOR_SOURCE_SHA
+output-buffer-address: 0x90000000
+output-buffer-capacity: 0x1000
+output-buffer-alignment: 0x1000
+EOF
+PROVISION_BINDING_SHA="$(sha256sum "$TMP/provision-binding.txt" | awk '{print $1}')"
+
+cat > "$TMP/capture-provisioning.txt" <<EOF
+secure-el3-handoff-report-sha256: $HANDOFF_SHA
+route-authorization-report-sha256: $ROUTE_SHA
+route-token-header-sha256: $TOKEN_HEADER_SHA
+route-token-source-sha256: $TOKEN_SOURCE_SHA
+authorization-binding-sha256: $BINDING_SHA
+collector-header-sha256: $HEADER_SHA
+collector-source-sha256: $SOURCE_SHA
+collector-transport-sha256: $TRANSPORT_SHA
+transcript-emitter-header-sha256: $EMITTER_HEADER_SHA
+transcript-emitter-source-sha256: $EMITTER_SOURCE_SHA
+capture-orchestrator-header-sha256: $ORCHESTRATOR_HEADER_SHA
+capture-orchestrator-source-sha256: $ORCHESTRATOR_SOURCE_SHA
+capture-provision-binding-schema: IZZOS_M7_SMCCC_CAPTURE_PROVISION_BINDING_V1
+capture-provision-binding-sha256: $PROVISION_BINDING_SHA
+current-dsc-inf-integration: FORBIDDEN_AND_ABSENT
+real-transport-selection: CALLER_SUPPLIED_NOT_GENERATED
+payload-launch-authorization: NO
+persistent-writes: FORBIDDEN
+slot-changes: FORBIDDEN
+classification: M7_SMCCC_CAPTURE_PROVISIONING_PASS
+EOF
+PROVISION_REPORT_SHA="$(sha256sum "$TMP/capture-provisioning.txt" | awk '{print $1}')"
 
 write_raw() {
   local path="$1" support="$2" discovery="$3" action="$4" count="$5" outcome="$6"
@@ -64,6 +110,8 @@ secure-el3-handoff-report-sha256: $HANDOFF_SHA
 route-authorization-report-sha256: $ROUTE_SHA
 authorization-binding-sha256: $BINDING_SHA
 collector-capture-sha256: $CAPTURE_SHA
+capture-provisioning-report-sha256: $PROVISION_REPORT_SHA
+capture-provision-binding-sha256: $PROVISION_BINDING_SHA
 collector-header-sha256: $HEADER_SHA
 collector-source-sha256: $SOURCE_SHA
 collector-transport-sha256: $TRANSPORT_SHA
@@ -73,6 +121,7 @@ capture-orchestrator-header-sha256: $ORCHESTRATOR_HEADER_SHA
 capture-orchestrator-source-sha256: $ORCHESTRATOR_SOURCE_SHA
 collector-outcome: $outcome
 capture-serialization: DETERMINISTIC_COLLECTOR_TRANSCRIPT_V1
+capture-provisioning: DETERMINISTIC_BOUND_ORCHESTRATOR_PROVISION_V1
 capture-route-authorization: BOUND_SINGLE_USE_TOKEN_TO_DECLARED_PROJECT_REVIEW
 authorized-output-buffer-address: 0x90000000
 authorized-output-buffer-capacity: 0x1000
@@ -112,8 +161,8 @@ smccc-feature-query: register=MDCR_EL3 opcode=0x1E1320 status=SUCCESS availabili
 EOF
 
 run_verify() {
-  local raw="$1" out="$2" handoff="${3:-$TMP/handoff.txt}" route="${4:-$TMP/route-authorization.txt}"
-  "$PYTHON" "$VERIFY" "$handoff" "$raw" "$out" "$route"
+  local raw="$1" out="$2" handoff="${3:-$TMP/handoff.txt}" route="${4:-$TMP/route-authorization.txt}" provision="${5:-$TMP/capture-provisioning.txt}"
+  "$PYTHON" "$VERIFY" "$handoff" "$raw" "$out" "$route" "$provision"
 }
 
 run_verify "$TMP/supported.txt" "$TMP/supported-out.txt" >/dev/null
@@ -127,8 +176,10 @@ grep -q '^scr-ns-rw-hce-fiq-corroboration: OUT_OF_SCOPE_NOT_REPORTED_BY_SERVICE$
 grep -q '^launch-authorization: NO$' "$TMP/supported-out.txt"
 grep -q '^raw-binds-exact-route-authorization-report: PASS$' "$TMP/supported-out.txt"
 grep -q '^raw-binds-exact-authorization-binding: PASS$' "$TMP/supported-out.txt"
+grep -q '^raw-binds-exact-capture-provisioning-report: PASS$' "$TMP/supported-out.txt"
+grep -q '^raw-binds-exact-capture-provisioning: PASS$' "$TMP/supported-out.txt"
 grep -q '^raw-buffer-matches-route-authorization: PASS$' "$TMP/supported-out.txt"
-grep -q '^capture-route-binding: EXACT_SINGLE_USE_TOKEN_REPORT_MATCH$' "$TMP/supported-out.txt"
+grep -q '^capture-route-binding: EXACT_SINGLE_USE_TOKEN_AND_CAPTURE_PROVISION_REPORT_MATCH$' "$TMP/supported-out.txt"
 grep -q '^classification: M7_SMCCC_EL3_FEATURE_AVAILABILITY_CORROBORATION_PASS$' "$TMP/supported-out.txt"
 
 write_raw "$TMP/unsupported.txt" NOT_SUPPORTED 0xFFFFFFFF VERSION_AND_ARCH_FEATURE_DISCOVERY_ONLY 0 FEATURE_UNAVAILABLE
@@ -187,6 +238,12 @@ assert_blocked wrong-route-digest \
 assert_blocked wrong-authorization-binding \
   "s/authorization-binding-sha256: $BINDING_SHA/authorization-binding-sha256: 0000000000000000000000000000000000000000000000000000000000000000/" \
   raw-binds-exact-authorization-binding
+assert_blocked wrong-provision-report-digest \
+  "s/capture-provisioning-report-sha256: $PROVISION_REPORT_SHA/capture-provisioning-report-sha256: 0000000000000000000000000000000000000000000000000000000000000000/" \
+  raw-binds-exact-capture-provisioning-report
+assert_blocked wrong-provision-binding \
+  "s/capture-provision-binding-sha256: $PROVISION_BINDING_SHA/capture-provision-binding-sha256: 0000000000000000000000000000000000000000000000000000000000000000/" \
+  raw-binds-exact-capture-provisioning
 assert_blocked wrong-buffer \
   's/authorized-output-buffer-address: 0x90000000/authorized-output-buffer-address: 0x90001000/' \
   raw-buffer-matches-route-authorization
@@ -211,6 +268,13 @@ if run_verify "$TMP/supported.txt" "$TMP/launch-route-out.txt" "$TMP/handoff.txt
   exit 1
 fi
 grep -q '^route-authorization-denies-launch-and-writes: FAIL$' "$TMP/launch-route-out.txt"
+
+sed 's/payload-launch-authorization: NO/payload-launch-authorization: YES/' "$TMP/capture-provisioning.txt" > "$TMP/launch-provision.txt"
+if run_verify "$TMP/supported.txt" "$TMP/launch-provision-out.txt" "$TMP/handoff.txt" "$TMP/route-authorization.txt" "$TMP/launch-provision.txt" >/dev/null 2>&1; then
+  echo "ERROR: SMCCC verifier accepted capture provisioning that permits launch" >&2
+  exit 1
+fi
+grep -q '^capture-provisioning-denies-integration-launch-and-writes: FAIL$' "$TMP/launch-provision-out.txt"
 
 sed 's/collector-outcome: FEATURE_UNAVAILABLE/collector-outcome: COMPLETE/' "$TMP/unsupported.txt" > "$TMP/wrong-unsupported-outcome.txt"
 if run_verify "$TMP/wrong-unsupported-outcome.txt" "$TMP/wrong-unsupported-outcome-out.txt" >/dev/null 2>&1; then

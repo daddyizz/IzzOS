@@ -67,6 +67,51 @@ collector-invocation-authorization: EXACTLY_ONCE_FOR_BOUND_CAPTURE_ONLY
 classification: M7_PRE_SEC_SMCCC_ROUTE_AUTHORIZATION_PASS
 EOF
 ROUTE_SHA="$(sha256sum "$TMP/route-authorization.txt" | awk '{print $1}')"
+TOKEN_HEADER_SHA="$(printf 'm7-emitter-route-token-header' | sha256sum | awk '{print $1}')"
+TOKEN_SOURCE_SHA="$(printf 'm7-emitter-route-token-source' | sha256sum | awk '{print $1}')"
+
+cat > "$TMP/provision-binding.txt" <<EOF
+capture-provision-binding-schema: IZZOS_M7_SMCCC_CAPTURE_PROVISION_BINDING_V1
+secure-el3-handoff-report-sha256: $HANDOFF_SHA
+route-authorization-report-sha256: $ROUTE_SHA
+route-token-header-sha256: $TOKEN_HEADER_SHA
+route-token-source-sha256: $TOKEN_SOURCE_SHA
+authorization-binding-sha256: $BINDING_SHA
+collector-header-sha256: $HEADER_SHA
+collector-source-sha256: $SOURCE_SHA
+collector-transport-sha256: $TRANSPORT_SHA
+transcript-emitter-header-sha256: $EMITTER_HEADER_SHA
+transcript-emitter-source-sha256: $EMITTER_SOURCE_SHA
+capture-orchestrator-header-sha256: $ORCHESTRATOR_HEADER_SHA
+capture-orchestrator-source-sha256: $ORCHESTRATOR_SOURCE_SHA
+output-buffer-address: 0x90000000
+output-buffer-capacity: 0x1000
+output-buffer-alignment: 0x1000
+EOF
+PROVISION_BINDING_SHA="$(sha256sum "$TMP/provision-binding.txt" | awk '{print $1}')"
+
+cat > "$TMP/capture-provisioning.txt" <<EOF
+secure-el3-handoff-report-sha256: $HANDOFF_SHA
+route-authorization-report-sha256: $ROUTE_SHA
+route-token-header-sha256: $TOKEN_HEADER_SHA
+route-token-source-sha256: $TOKEN_SOURCE_SHA
+authorization-binding-sha256: $BINDING_SHA
+collector-header-sha256: $HEADER_SHA
+collector-source-sha256: $SOURCE_SHA
+collector-transport-sha256: $TRANSPORT_SHA
+transcript-emitter-header-sha256: $EMITTER_HEADER_SHA
+transcript-emitter-source-sha256: $EMITTER_SOURCE_SHA
+capture-orchestrator-header-sha256: $ORCHESTRATOR_HEADER_SHA
+capture-orchestrator-source-sha256: $ORCHESTRATOR_SOURCE_SHA
+capture-provision-binding-schema: IZZOS_M7_SMCCC_CAPTURE_PROVISION_BINDING_V1
+capture-provision-binding-sha256: $PROVISION_BINDING_SHA
+current-dsc-inf-integration: FORBIDDEN_AND_ABSENT
+real-transport-selection: CALLER_SUPPLIED_NOT_GENERATED
+payload-launch-authorization: NO
+persistent-writes: FORBIDDEN
+slot-changes: FORBIDDEN
+classification: M7_SMCCC_CAPTURE_PROVISIONING_PASS
+EOF
 
 cat > "$TMP/harness.c" <<'EOF'
 #include <assert.h>
@@ -147,9 +192,9 @@ int main(int Argc, char **Argv)
   size_t Length;
   size_t Index;
 
-  assert(Argc == 12);
-  Binding = (M7_SMCCC_TRANSCRIPT_BINDING){Argv[2], Argv[3], Argv[4], Argv[5], Argv[6], Argv[7], Argv[8], Argv[9]};
-  PrepareAuthorization(&Token, &Expectation, Argv[10], Argv[11]);
+  assert(Argc == 13);
+  Binding = (M7_SMCCC_TRANSCRIPT_BINDING){Argv[2], Argv[3], Argv[4], Argv[5], Argv[6], Argv[7], Argv[8], Argv[9], Argv[10]};
+  PrepareAuthorization(&Token, &Expectation, Argv[11], Argv[12]);
   State.CallerExceptionLevel = M7_SMCCC_EXPECTED_CALLER_EL;
   State.CallerIsNonSecure = 1;
   State.RouteAuthorizationToken = &Token;
@@ -201,7 +246,7 @@ emit() {
   local mode="$1" output="$2"
   "$TMP/emitter-test" "$mode" "$HANDOFF_SHA" "$HEADER_SHA" "$SOURCE_SHA" "$TRANSPORT_SHA" \
     "$EMITTER_HEADER_SHA" "$EMITTER_SOURCE_SHA" "$ORCHESTRATOR_HEADER_SHA" "$ORCHESTRATOR_SOURCE_SHA" \
-    "$ROUTE_SHA" "$BINDING_SHA" > "$output"
+    "$PROVISION_BINDING_SHA" "$ROUTE_SHA" "$BINDING_SHA" > "$output"
 }
 
 emit supported "$TMP/supported-capture.txt"
@@ -211,22 +256,23 @@ grep -q '^collector-outcome: COMPLETE$' "$TMP/supported-capture.txt"
 grep -q "^route-authorization-report-sha256: $ROUTE_SHA$" "$TMP/supported-capture.txt"
 grep -q "^authorization-binding-sha256: $BINDING_SHA$" "$TMP/supported-capture.txt"
 grep -q "^capture-orchestrator-source-sha256: $ORCHESTRATOR_SOURCE_SHA$" "$TMP/supported-capture.txt"
+grep -q "^capture-provision-binding-sha256: $PROVISION_BINDING_SHA$" "$TMP/supported-capture.txt"
 grep -q '^route-authorization-input: BOUND_SINGLE_USE_TOKEN$' "$TMP/supported-capture.txt"
 grep -q '^authorized-output-buffer-address: 0x90000000$' "$TMP/supported-capture.txt"
 grep -q '^calls-issued: 5$' "$TMP/supported-capture.txt"
 grep -q '^collector-call: index=4 fid=0xC0000003 arg1=0x1E1320 x0=0x0 x1=0x0$' "$TMP/supported-capture.txt"
-"$PYTHON" "$SERIALIZE" "$TMP/handoff.txt" "$TMP/supported-capture.txt" "$TMP/supported-raw.txt" "$TMP/supported-report.txt" "$TMP/route-authorization.txt" >/dev/null
+"$PYTHON" "$SERIALIZE" "$TMP/handoff.txt" "$TMP/supported-capture.txt" "$TMP/supported-raw.txt" "$TMP/supported-report.txt" "$TMP/route-authorization.txt" "$TMP/capture-provisioning.txt" >/dev/null
 grep -q '^classification: M7_SMCCC_CAPTURE_SERIALIZATION_PASS$' "$TMP/supported-report.txt"
-"$PYTHON" "$VERIFY" "$TMP/handoff.txt" "$TMP/supported-raw.txt" "$TMP/supported-gate.txt" "$TMP/route-authorization.txt" >/dev/null
+"$PYTHON" "$VERIFY" "$TMP/handoff.txt" "$TMP/supported-raw.txt" "$TMP/supported-gate.txt" "$TMP/route-authorization.txt" "$TMP/capture-provisioning.txt" >/dev/null
 grep -q '^classification: M7_SMCCC_EL3_FEATURE_AVAILABILITY_CORROBORATION_PASS$' "$TMP/supported-gate.txt"
 
 emit unsupported "$TMP/unsupported-capture.txt"
 grep -q '^collector-outcome: FEATURE_UNAVAILABLE$' "$TMP/unsupported-capture.txt"
 grep -q '^calls-issued: 2$' "$TMP/unsupported-capture.txt"
 test "$(grep -c '^collector-call:' "$TMP/unsupported-capture.txt")" -eq 2
-"$PYTHON" "$SERIALIZE" "$TMP/handoff.txt" "$TMP/unsupported-capture.txt" "$TMP/unsupported-raw.txt" "$TMP/unsupported-report.txt" "$TMP/route-authorization.txt" >/dev/null
+"$PYTHON" "$SERIALIZE" "$TMP/handoff.txt" "$TMP/unsupported-capture.txt" "$TMP/unsupported-raw.txt" "$TMP/unsupported-report.txt" "$TMP/route-authorization.txt" "$TMP/capture-provisioning.txt" >/dev/null
 grep -q '^classification: M7_SMCCC_CAPTURE_SERIALIZATION_PASS$' "$TMP/unsupported-report.txt"
-"$PYTHON" "$VERIFY" "$TMP/handoff.txt" "$TMP/unsupported-raw.txt" "$TMP/unsupported-gate.txt" "$TMP/route-authorization.txt" >/dev/null
+"$PYTHON" "$VERIFY" "$TMP/handoff.txt" "$TMP/unsupported-raw.txt" "$TMP/unsupported-gate.txt" "$TMP/route-authorization.txt" "$TMP/capture-provisioning.txt" >/dev/null
 grep -q '^classification: M7_SMCCC_EL3_FEATURE_AVAILABILITY_ROUTE_UNSUPPORTED$' "$TMP/unsupported-gate.txt"
 
 echo "PASS: M7 deterministic SMCCC transcript emitter and serializer round trip"

@@ -16,6 +16,7 @@ typedef struct {
   const char *TranscriptEmitterSourceSha256;
   const char *CaptureOrchestratorHeaderSha256;
   const char *CaptureOrchestratorSourceSha256;
+  const char *CaptureProvisionBindingSha256;
 } M7_SMCCC_TRANSCRIPT_BINDING;
 
 typedef enum {

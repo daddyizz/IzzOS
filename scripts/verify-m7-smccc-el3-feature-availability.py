@@ -8,6 +8,7 @@ HANDOFF = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("out/m7-secure-el3-ha
 RAW = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("out/m7-smccc-el3-feature-availability-raw.txt")
 OUT = Path(sys.argv[3]) if len(sys.argv) > 3 else Path("out/m7-smccc-el3-feature-availability.txt")
 ROUTE_AUTHORIZATION = Path(sys.argv[4]) if len(sys.argv) > 4 else Path("out/m7-pre-sec-smccc-route-authorization.txt")
+CAPTURE_PROVISIONING = Path(sys.argv[5]) if len(sys.argv) > 5 else Path("out/m7-smccc-capture-provisioning.txt")
 
 ROOT = Path(__file__).resolve().parents[1]
 LIB = ROOT / "uefi/Platform/IzzOS/OvaltinePkg/Library/M7SmcccFeatureAvailabilityCollector"
@@ -22,6 +23,7 @@ COMPONENTS = {
 }
 
 SCHEMA = "IZZOS_M7_SMCCC_EL3_FEATURE_AVAILABILITY_V1"
+CAPTURE_PROVISION_BINDING_SCHEMA = "IZZOS_M7_SMCCC_CAPTURE_PROVISION_BINDING_V1"
 VERSION_FID = 0x80000000
 DISCOVERY_FID = 0x80000001
 AVAILABILITY_FID = 0xC0000003
@@ -87,16 +89,18 @@ def emit(lines, exit_code=0):
         raise SystemExit(exit_code)
 
 
-for required in (HANDOFF, RAW, ROUTE_AUTHORIZATION, *COMPONENTS.values()):
+for required in (HANDOFF, RAW, ROUTE_AUTHORIZATION, CAPTURE_PROVISIONING, *COMPONENTS.values()):
     if not required.is_file():
         raise SystemExit(f"ERROR: required M7 SMCCC feature-availability input not found: {required}")
 
 handoff = HANDOFF.read_text(errors="replace")
 raw = RAW.read_text(errors="replace")
 route_authorization = ROUTE_AUTHORIZATION.read_text(errors="replace")
+capture_provisioning = CAPTURE_PROVISIONING.read_text(errors="replace")
 handoff_hash = sha256(HANDOFF)
 raw_hash = sha256(RAW)
 route_authorization_hash = sha256(ROUTE_AUTHORIZATION)
+capture_provisioning_hash = sha256(CAPTURE_PROVISIONING)
 component_hashes = {label: sha256(path) for label, path in COMPONENTS.items()}
 support = field(raw, "feature-availability-support")
 collector_outcome = field(raw, "collector-outcome")
@@ -108,6 +112,20 @@ raw_buffer_alignment = hex_value(raw, "authorized-output-buffer-alignment")
 route_buffer_address = hex_value(route_authorization, "output-buffer-address")
 route_buffer_capacity = hex_value(route_authorization, "output-buffer-capacity")
 route_buffer_alignment = hex_value(route_authorization, "output-buffer-alignment")
+provision_binding_hash = field(capture_provisioning, "capture-provision-binding-sha256")
+provision_binding_lines = [
+    f"capture-provision-binding-schema: {CAPTURE_PROVISION_BINDING_SCHEMA}",
+    f"secure-el3-handoff-report-sha256: {handoff_hash}",
+    f"route-authorization-report-sha256: {route_authorization_hash}",
+    f"route-token-header-sha256: {(field(capture_provisioning, 'route-token-header-sha256') or 'MISSING').lower()}",
+    f"route-token-source-sha256: {(field(capture_provisioning, 'route-token-source-sha256') or 'MISSING').lower()}",
+    f"authorization-binding-sha256: {(field(route_authorization, 'authorization-binding-sha256') or 'MISSING').lower()}",
+    *[f"{label}: {value}" for label, value in component_hashes.items()],
+    f"output-buffer-address: 0x{route_buffer_address:X}" if route_buffer_address is not None else "output-buffer-address: MISSING",
+    f"output-buffer-capacity: 0x{route_buffer_capacity:X}" if route_buffer_capacity is not None else "output-buffer-capacity: MISSING",
+    f"output-buffer-alignment: 0x{route_buffer_alignment:X}" if route_buffer_alignment is not None else "output-buffer-alignment: MISSING",
+]
+expected_provision_binding_hash = hashlib.sha256(("\n".join(provision_binding_lines) + "\n").encode()).hexdigest()
 
 queries = []
 malformed_query_lines = []
@@ -147,6 +165,7 @@ common_raw_fields = {
     "slot-changes": "NONE",
     "observation-authenticity": "SELF_REPORTED_NOT_INDEPENDENTLY_ATTESTED",
     "capture-serialization": "DETERMINISTIC_COLLECTOR_TRANSCRIPT_V1",
+    "capture-provisioning": "DETERMINISTIC_BOUND_ORCHESTRATOR_PROVISION_V1",
     "capture-route-authorization": "BOUND_SINGLE_USE_TOKEN_TO_DECLARED_PROJECT_REVIEW",
     "launch-authorization": "NO",
 }
@@ -167,6 +186,16 @@ checks = [
     ("route-authorization-denies-launch-and-writes", field(route_authorization, "payload-launch-authorization") == "NO" and field(route_authorization, "persistent-writes") == "FORBIDDEN" and field(route_authorization, "slot-changes") == "FORBIDDEN"),
     ("raw-binds-exact-route-authorization-report", equal_hash(field(raw, "route-authorization-report-sha256"), route_authorization_hash)),
     ("raw-binds-exact-authorization-binding", equal_hash(field(raw, "authorization-binding-sha256"), field(route_authorization, "authorization-binding-sha256")) and valid_nonzero_hash(field(route_authorization, "authorization-binding-sha256"))),
+    ("capture-provisioning-classification-passed", field(capture_provisioning, "classification") == "M7_SMCCC_CAPTURE_PROVISIONING_PASS"),
+    ("capture-provisioning-binding-schema-is-exact", field(capture_provisioning, "capture-provision-binding-schema") == CAPTURE_PROVISION_BINDING_SCHEMA),
+    ("capture-provisioning-binding-is-canonical", valid_nonzero_hash(provision_binding_hash) and equal_hash(provision_binding_hash, expected_provision_binding_hash)),
+    ("capture-provisioning-binds-exact-handoff", equal_hash(field(capture_provisioning, "secure-el3-handoff-report-sha256"), handoff_hash)),
+    ("capture-provisioning-binds-exact-route-authorization", equal_hash(field(capture_provisioning, "route-authorization-report-sha256"), route_authorization_hash)),
+    ("capture-provisioning-binds-exact-authorization-binding", equal_hash(field(capture_provisioning, "authorization-binding-sha256"), field(route_authorization, "authorization-binding-sha256"))),
+    ("capture-provisioning-token-digests-are-valid", valid_nonzero_hash(field(capture_provisioning, "route-token-header-sha256")) and valid_nonzero_hash(field(capture_provisioning, "route-token-source-sha256"))),
+    ("capture-provisioning-denies-integration-launch-and-writes", field(capture_provisioning, "current-dsc-inf-integration") == "FORBIDDEN_AND_ABSENT" and field(capture_provisioning, "real-transport-selection") == "CALLER_SUPPLIED_NOT_GENERATED" and field(capture_provisioning, "payload-launch-authorization") == "NO" and field(capture_provisioning, "persistent-writes") == "FORBIDDEN" and field(capture_provisioning, "slot-changes") == "FORBIDDEN"),
+    ("raw-binds-exact-capture-provisioning-report", equal_hash(field(raw, "capture-provisioning-report-sha256"), capture_provisioning_hash)),
+    ("raw-binds-exact-capture-provisioning", equal_hash(field(raw, "capture-provision-binding-sha256"), provision_binding_hash)),
     ("raw-buffer-matches-route-authorization", None not in (raw_buffer_address, raw_buffer_capacity, raw_buffer_alignment, route_buffer_address, route_buffer_capacity, route_buffer_alignment) and (raw_buffer_address, raw_buffer_capacity, raw_buffer_alignment) == (route_buffer_address, route_buffer_capacity, route_buffer_alignment)),
     ("raw-buffer-is-bounded-and-aligned", raw_buffer_address is not None and raw_buffer_capacity is not None and raw_buffer_alignment is not None and raw_buffer_address > 0 and 0x1000 <= raw_buffer_capacity <= 0x10000 and raw_buffer_alignment >= 0x40 and raw_buffer_alignment & (raw_buffer_alignment - 1) == 0 and raw_buffer_address % raw_buffer_alignment == 0 and raw_buffer_address + raw_buffer_capacity <= 1 << 64),
     ("collector-capture-digest-is-valid", valid_nonzero_hash(field(raw, "collector-capture-sha256"))),
@@ -175,6 +204,7 @@ checks = [
 for label, expected in component_hashes.items():
     checks.append((f"raw-{label}-matches", equal_hash(field(raw, label), expected)))
     checks.append((f"route-authorization-{label}-matches", equal_hash(field(route_authorization, label), expected)))
+    checks.append((f"capture-provisioning-{label}-matches", equal_hash(field(capture_provisioning, label), expected)))
 
 for label, expected in common_raw_fields.items():
     checks.append((f"raw-{label}-is-exact", field(raw, label) == expected))
@@ -190,6 +220,8 @@ checks.extend(
             "smc-query-action",
             "route-authorization-report-sha256",
             "authorization-binding-sha256",
+            "capture-provisioning-report-sha256",
+            "capture-provision-binding-sha256",
             "collector-capture-sha256",
             "collector-outcome",
             "authorized-output-buffer-address",
@@ -248,10 +280,21 @@ route_binding_checks = {
     "route-authorization-denies-launch-and-writes",
     "raw-binds-exact-route-authorization-report",
     "raw-binds-exact-authorization-binding",
+    "capture-provisioning-classification-passed",
+    "capture-provisioning-binding-schema-is-exact",
+    "capture-provisioning-binding-is-canonical",
+    "capture-provisioning-binds-exact-handoff",
+    "capture-provisioning-binds-exact-route-authorization",
+    "capture-provisioning-binds-exact-authorization-binding",
+    "capture-provisioning-token-digests-are-valid",
+    "capture-provisioning-denies-integration-launch-and-writes",
+    "raw-binds-exact-capture-provisioning-report",
+    "raw-binds-exact-capture-provisioning",
     "raw-buffer-matches-route-authorization",
     "raw-buffer-is-bounded-and-aligned",
     *[f"raw-{label}-matches" for label in component_hashes],
     *[f"route-authorization-{label}-matches" for label in component_hashes],
+    *[f"capture-provisioning-{label}-matches" for label in component_hashes],
 }
 route_binding_passed = all(passed for name, passed in checks if name in route_binding_checks)
 route_review_passed = dict(checks)["route-authorization-review-scope-is-exact"]
@@ -271,6 +314,9 @@ lines = [
     f"route-authorization-report: {ROUTE_AUTHORIZATION}",
     f"route-authorization-report-sha256: {route_authorization_hash}",
     f"authorization-binding-sha256: {field(route_authorization, 'authorization-binding-sha256') or 'MISSING'}",
+    f"capture-provisioning-report: {CAPTURE_PROVISIONING}",
+    f"capture-provisioning-report-sha256: {capture_provisioning_hash}",
+    f"capture-provision-binding-sha256: {provision_binding_hash or 'MISSING'}",
     f"authorized-output-buffer-address: 0x{raw_buffer_address:X}" if raw_buffer_address is not None else "authorized-output-buffer-address: UNAVAILABLE",
     f"authorized-output-buffer-capacity: 0x{raw_buffer_capacity:X}" if raw_buffer_capacity is not None else "authorized-output-buffer-capacity: UNAVAILABLE",
     f"authorized-output-buffer-alignment: 0x{raw_buffer_alignment:X}" if raw_buffer_alignment is not None else "authorized-output-buffer-alignment: UNAVAILABLE",
@@ -295,7 +341,7 @@ lines = [
     "coherency-mechanism-corroboration: OUT_OF_SCOPE_NOT_REPORTED_BY_SERVICE",
     "raw-el3-register-disclosure: NO",
     "capture-route-safety: ARCHITECTED_READ_ONLY_QUERY_CONTRACT",
-    f"capture-route-binding: {'EXACT_SINGLE_USE_TOKEN_REPORT_MATCH' if route_binding_passed else 'INVALID_OR_MISMATCHED'}",
+    f"capture-route-binding: {'EXACT_SINGLE_USE_TOKEN_AND_CAPTURE_PROVISION_REPORT_MATCH' if route_binding_passed else 'INVALID_OR_MISMATCHED'}",
     f"capture-route-device-authorization: {'DECLARED_PROJECT_OWNER_REVIEW_NOT_CRYPTOGRAPHICALLY_ATTESTED' if route_review_passed else 'INVALID_OR_UNVERIFIED'}",
     "independent-observation-authenticity: NOT_ESTABLISHED",
     "secure-el3-prerequisite-compliance: NOT_INDEPENDENTLY_PROVEN",
@@ -312,7 +358,7 @@ if failed or corroboration_failed:
     emit(
         lines + [
             "classification: M7_SMCCC_EL3_FEATURE_AVAILABILITY_ROUTE_BLOCKED",
-            "decision: the handoff, route authorization, source identity, authorization binding, output buffer, collector outcome, Arm Architecture Service identifiers, discovery result, normalized query set, applicable feature masks, or safety denials are invalid. Do not issue vendor/SiP calls, infer raw EL3/base/GIC/coherency state, or authorize wrapper code, MMIO, or launch.",
+            "decision: the handoff, route authorization, exact capture-provisioning report/binding, source identity, authorization binding, output buffer, collector outcome, Arm Architecture Service identifiers, discovery result, normalized query set, applicable feature masks, or safety denials are invalid. Do not issue vendor/SiP calls, infer raw EL3/base/GIC/coherency state, or authorize wrapper code, MMIO, or launch.",
         ],
         1,
     )

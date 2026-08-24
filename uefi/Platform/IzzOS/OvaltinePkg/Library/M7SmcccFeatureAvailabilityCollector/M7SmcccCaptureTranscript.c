@@ -168,7 +168,8 @@ M7IsValidSmcccTranscriptBinding (
          IsExactSha256 (Binding->TranscriptEmitterHeaderSha256) &&
          IsExactSha256 (Binding->TranscriptEmitterSourceSha256) &&
          IsExactSha256 (Binding->CaptureOrchestratorHeaderSha256) &&
-         IsExactSha256 (Binding->CaptureOrchestratorSourceSha256);
+         IsExactSha256 (Binding->CaptureOrchestratorSourceSha256) &&
+         IsExactSha256 (Binding->CaptureProvisionBindingSha256);
 }
 
 static void
@@ -323,6 +324,7 @@ RenderTranscript (
   AppendBindingLine (Writer, "transcript-emitter-source-sha256", Binding->TranscriptEmitterSourceSha256);
   AppendBindingLine (Writer, "capture-orchestrator-header-sha256", Binding->CaptureOrchestratorHeaderSha256);
   AppendBindingLine (Writer, "capture-orchestrator-source-sha256", Binding->CaptureOrchestratorSourceSha256);
+  AppendBindingLine (Writer, "capture-provision-binding-sha256", Binding->CaptureProvisionBindingSha256);
   AppendText (Writer, "route-authorization-report-sha256: ");
   AppendDigest (Writer, Capture->RouteAuthorizationReportSha256);
   AppendCharacter (Writer, '\n');
