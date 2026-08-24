@@ -28,6 +28,7 @@ if have adb; then
     printf 'android: '; adb shell getprop ro.build.version.release | tr -d '\r'
     printf 'build-id: '; adb shell getprop ro.build.display.id | tr -d '\r'
     printf 'slot-suffix: '; adb shell getprop ro.boot.slot_suffix | tr -d '\r'
+    printf 'dtb-index: '; adb shell getprop ro.boot.dtb_idx | tr -d '\r'
     printf 'verified-boot-state: '; adb shell getprop ro.boot.verifiedbootstate | tr -d '\r'
     printf 'vbmeta-device-state: '; adb shell getprop ro.boot.vbmeta.device_state | tr -d '\r'
     echo

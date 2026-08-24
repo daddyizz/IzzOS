@@ -66,6 +66,28 @@ M7_FD_CAPACITY_CONTRACT_PASS
 
 This is a capacity result only. It deliberately does not choose the FD base or claim that the bootloader will enter the artifact.
 
+## Exact selected-DTB binding
+
+Before deriving GIC, timer, or other platform facts from a DTB, bind one extracted blob to all three sources of evidence:
+
+```bash
+python3 scripts/verify-m7-selected-dtb.py \
+  out/m7-layout-contract.txt \
+  out/m1-device-inspection/ovaltine-inspection-analysis.txt \
+  out/vendor-boot-dtb-set/MANIFEST.txt \
+  out/vendor-boot-dtb-set/dtb-1.dtb \
+  output/vendor_boot.img \
+  out/m7-selected-dtb.txt
+```
+
+The verifier requires a passing M7 layout contract, the exact `vendor_boot` hash carried from M6, a numeric device-reported DTB index, a matching extraction-manifest entry, matching DTB bytes, and the expected Cape identity. A successful result is:
+
+```text
+M7_EXACT_SELECTED_DTB_BOUND
+```
+
+This binds the DTB input for later platform analysis. It does not prove that static DTB MMIO values are sufficient for standalone initialization.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
@@ -73,7 +95,7 @@ The following remain separate evidence gates:
 - actual FD size and alignment from a concrete SEC/PEI/DXE composition;
 - FD base and Android container behavior derived from exact boot-chain evidence, not an arbitrary window;
 - AArch64 entry and exception-level contract;
-- GIC/timer/platform-init requirements;
+- GIC/timer/platform-init requirements derived from an `M7_EXACT_SELECTED_DTB_BOUND` artifact;
 - exact temporary Android boot-container behavior;
 - recovery and exact-device route authorization.
 

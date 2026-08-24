@@ -23,6 +23,7 @@ if [[ "${1:-}" == "shell" && "${2:-}" == "getprop" ]]; then
     ro.build.version.release) echo '16' ;;
     ro.build.display.id) echo 'CPH2415_16.0.0.TEST' ;;
     ro.boot.slot_suffix) echo '_a' ;;
+    ro.boot.dtb_idx) echo '1' ;;
     ro.boot.verifiedbootstate) echo 'orange' ;;
     ro.boot.vbmeta.device_state) echo 'unlocked' ;;
     *) echo '' ;;
@@ -68,6 +69,7 @@ grep -q '^Build ID: CPH2415_16.0.0.TEST$' "$OUT1/INSPECTION_SUMMARY.txt"
 grep -q '^Current slot: a$' "$OUT1/INSPECTION_SUMMARY.txt"
 grep -q '^Bootloader unlocked: yes$' "$OUT1/INSPECTION_SUMMARY.txt"
 grep -q '^Userspace fastboot: no$' "$OUT1/INSPECTION_SUMMARY.txt"
+grep -q '^dtb-index: 1$' "$OUT1/ovaltine-inspection.txt"
 grep -q '^Device writes: NONE$' "$OUT1/INSPECTION_SUMMARY.txt"
 grep -q '^Launch commands executed: NO$' "$OUT1/INSPECTION_SUMMARY.txt"
 (cd "$OUT1" && sha256sum -c SHA256SUMS >/dev/null)

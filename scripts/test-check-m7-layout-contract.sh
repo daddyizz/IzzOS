@@ -56,6 +56,8 @@ grep -q '^m6-stock-page-size-is-valid: PASS$' "$TMP/pass/layout.txt"
 grep -q '^proven-stock-page-size: 0x1000$' "$TMP/pass/layout.txt"
 grep -q '^kernel-region-does-not-overlap-other-cfg-regions: PASS$' "$TMP/pass/layout.txt"
 grep -q '^classification: M7_LAYOUT_REGION_CONTRACT_PASS$' "$TMP/pass/layout.txt"
+grep -Eq '^geometry-boot-sha256: [0-9a-f]{64}$' "$TMP/pass/layout.txt"
+grep -Eq '^geometry-vendor-boot-sha256: [0-9a-f]{64}$' "$TMP/pass/layout.txt"
 
 printf '\n# tampered after M6 evidence capture\n' >> "$TMP/pass/uefiplat.cfg"
 if "$PYTHON" "$M7" \

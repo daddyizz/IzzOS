@@ -117,6 +117,8 @@ lines = [
     f'proven-stock-ramdisk-load: 0x{ramdisk:08X}',
     f'proven-stock-page-size: 0x{page_size:X}',
     f'geometry-cfg-sha256: {cfg_hash_from_geometry or "MISSING"}',
+    f'geometry-boot-sha256: {boot_hash_from_geometry or "MISSING"}',
+    f'geometry-vendor-boot-sha256: {vendor_boot_hash_from_geometry or "MISSING"}',
     f'actual-cfg-sha256: {sha256(CFG)}',
 ]
 if next_region is not None:

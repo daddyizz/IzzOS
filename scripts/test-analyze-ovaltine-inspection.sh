@@ -30,6 +30,7 @@ vendor-device: ovaltine
 android: 16
 build-id: TEST.BUILD
 slot-suffix: _a
+dtb-index: 1
 verified-boot-state: orange
 vbmeta-device-state: unlocked
 [FASTBOOT] connected devices: 1
@@ -152,6 +153,8 @@ product: CPH2415
 EOF
 
 assert_classification "classic fastboot candidate" "CLASSIC_FASTBOOT_CANDIDATE_UNVERIFIED" "${TMP_DIR}/candidate.txt"
+CANDIDATE_OUTPUT="$(bash "${ANALYZER}" "${TMP_DIR}/candidate.txt")"
+grep -Fq 'DTB index: 1' <<<"${CANDIDATE_OUTPUT}"
 assert_classification "CPH2413 OxygenOS 15 ADB identity" "NEED_EXACT_FASTBOOT_INSPECTION" "${TMP_DIR}/cph2413-oos15-adb.txt"
 assert_classification "CPH2413 inconsistent tuple blocked" "TARGET_MISMATCH_BLOCKED" "${TMP_DIR}/cph2413-inconsistent.txt"
 assert_classification "taro classic fastboot candidate" "CLASSIC_FASTBOOT_CANDIDATE_UNVERIFIED" "${TMP_DIR}/taro-fastboot.txt"

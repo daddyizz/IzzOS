@@ -69,6 +69,9 @@ jobs:
       - name: Test M7 standalone FD capacity contract
         run: bash scripts/test-verify-m7-fd-capacity.sh
 
+      - name: Test M7 exact selected-DTB binding
+        run: bash scripts/test-verify-m7-selected-dtb.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 

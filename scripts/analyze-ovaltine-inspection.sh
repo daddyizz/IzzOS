@@ -54,6 +54,7 @@ VENDOR_DEVICE="$(adb_value vendor-device || true)"
 ANDROID="$(adb_value android || true)"
 BUILD_ID="$(adb_value build-id || true)"
 SLOT_SUFFIX="$(adb_value slot-suffix || true)"
+DTB_INDEX="$(adb_value dtb-index || true)"
 VB_STATE="$(adb_value verified-boot-state || true)"
 VBMETA_STATE="$(adb_value vbmeta-device-state || true)"
 
@@ -131,6 +132,7 @@ Vendor device: ${VENDOR_DEVICE:-unknown}
 Android: ${ANDROID:-unknown}
 Build ID: ${BUILD_ID:-unknown}
 Slot suffix: ${SLOT_SUFFIX:-unknown}
+DTB index: ${DTB_INDEX:-unknown}
 Verified boot: ${VB_STATE:-unknown}
 VBMeta device state: ${VBMETA_STATE:-unknown}
 
