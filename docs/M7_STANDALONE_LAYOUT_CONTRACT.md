@@ -505,6 +505,26 @@ M7_SMCCC_CAPTURE_SERIALIZATION_PASS
 
 Round-trip tests feed both supported and unsupported serialized manifests into the existing SMCCC route gate. This proves format and binding behavior only; the transcript remains self-reported and does not authorize invoking the collector on the device.
 
+## Standalone host-readiness audit
+
+Summarize the complete internal-M7 report chain without confusing it with product-roadmap M7 or authorizing promotion:
+
+```bash
+python3 scripts/report-m7-standalone-readiness.py \
+  out \
+  out/m7-standalone-readiness.txt
+```
+
+The auditor requires 20 exact report classifications and verifies the available cross-report SHA-256 links from the SEC requirements and entry observation through extension, coherency, Secure EL3, route-token, capture-provisioning, serialization and final SMCCC reports. Missing reports, duplicate classifications, changed upstream bytes and unsupported promotion claims fail closed.
+
+A complete host-only chain is classified:
+
+```text
+M7_HOST_CONTRACT_CHAIN_COMPLETE_DEVICE_EVIDENCE_REQUIRED
+```
+
+This status explicitly records that the product roadmap remains at `M1 — Non-Destructive UEFI Diagnostic Payload` while the internal engineering sequence is at M7. It still requires independently authenticated exact-device evidence and verified SEC/PrePi wrapper execution; DSC/FDF promotion, Android container construction and device launch remain blocked.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:

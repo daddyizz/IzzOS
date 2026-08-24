@@ -132,6 +132,9 @@ jobs:
       - name: Test M7 deterministic SMCCC capture serializer round trip
         run: bash scripts/test-serialize-m7-smccc-feature-availability-capture.sh
 
+      - name: Test M7 standalone host-readiness audit
+        run: bash scripts/test-report-m7-standalone-readiness.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 
