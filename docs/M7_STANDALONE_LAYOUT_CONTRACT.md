@@ -378,6 +378,28 @@ M7_SMCCC_COLLECTOR_SOURCE_CONTRACT_PASS
 
 The prototype is not device-route authorization. Its real transport must not be linked or invoked until a separate gate proves the exact pre-SEC non-secure EL2 route, recovery context and capture-output binding.
 
+## Deterministic collector-capture serializer
+
+Convert a future collector transcript into the sanitized manifest consumed by the SMCCC route gate:
+
+```bash
+python3 scripts/serialize-m7-smccc-feature-availability-capture.py \
+  out/m7-secure-el3-handoff-state.txt \
+  out/m7-smccc-collector-capture.txt \
+  out/m7-smccc-el3-feature-availability-raw.txt \
+  out/m7-smccc-capture-serialization.txt
+```
+
+Schema `IZZOS_M7_SMCCC_COLLECTOR_CAPTURE_V1` binds the exact handoff report and SHA-256 identities of the collector header, C state machine, and AArch64 transport. The serializer accepts only `COMPLETE` with five canonical calls or `FEATURE_UNAVAILABLE` with the two discovery calls. It rejects version/call errors, reordered or additional calls, changed source identities, vendor/SiP actions, write/launch claims, and any direct `SCR_EL3`, `CPTR_EL3`, `MDCR_EL3`, GIC, ZCR or SMCR field.
+
+The output is deterministic and contains only the normalized feature-availability masks already defined by the Arm service. A successful serializer report is:
+
+```text
+M7_SMCCC_CAPTURE_SERIALIZATION_PASS
+```
+
+Round-trip tests feed both supported and unsupported serialized manifests into the existing SMCCC route gate. This proves format and binding behavior only; the transcript remains self-reported and does not authorize invoking the collector on the device.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
