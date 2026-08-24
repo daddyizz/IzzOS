@@ -211,7 +211,7 @@ grep -q '^calls-issued: 5$' "$TMP/supported-capture.txt"
 grep -q '^collector-call: index=4 fid=0xC0000003 arg1=0x1E1320 x0=0x0 x1=0x0$' "$TMP/supported-capture.txt"
 "$PYTHON" "$SERIALIZE" "$TMP/handoff.txt" "$TMP/supported-capture.txt" "$TMP/supported-raw.txt" "$TMP/supported-report.txt" "$TMP/route-authorization.txt" >/dev/null
 grep -q '^classification: M7_SMCCC_CAPTURE_SERIALIZATION_PASS$' "$TMP/supported-report.txt"
-"$PYTHON" "$VERIFY" "$TMP/handoff.txt" "$TMP/supported-raw.txt" "$TMP/supported-gate.txt" >/dev/null
+"$PYTHON" "$VERIFY" "$TMP/handoff.txt" "$TMP/supported-raw.txt" "$TMP/supported-gate.txt" "$TMP/route-authorization.txt" >/dev/null
 grep -q '^classification: M7_SMCCC_EL3_FEATURE_AVAILABILITY_CORROBORATION_PASS$' "$TMP/supported-gate.txt"
 
 emit unsupported "$TMP/unsupported-capture.txt"
@@ -220,7 +220,7 @@ grep -q '^calls-issued: 2$' "$TMP/unsupported-capture.txt"
 test "$(grep -c '^collector-call:' "$TMP/unsupported-capture.txt")" -eq 2
 "$PYTHON" "$SERIALIZE" "$TMP/handoff.txt" "$TMP/unsupported-capture.txt" "$TMP/unsupported-raw.txt" "$TMP/unsupported-report.txt" "$TMP/route-authorization.txt" >/dev/null
 grep -q '^classification: M7_SMCCC_CAPTURE_SERIALIZATION_PASS$' "$TMP/unsupported-report.txt"
-"$PYTHON" "$VERIFY" "$TMP/handoff.txt" "$TMP/unsupported-raw.txt" "$TMP/unsupported-gate.txt" >/dev/null
+"$PYTHON" "$VERIFY" "$TMP/handoff.txt" "$TMP/unsupported-raw.txt" "$TMP/unsupported-gate.txt" "$TMP/route-authorization.txt" >/dev/null
 grep -q '^classification: M7_SMCCC_EL3_FEATURE_AVAILABILITY_ROUTE_UNSUPPORTED$' "$TMP/unsupported-gate.txt"
 
 echo "PASS: M7 deterministic SMCCC transcript emitter and serializer round trip"

@@ -347,8 +347,11 @@ Validate a future read-only Arm Architecture Service capture against the exact S
 python3 scripts/verify-m7-smccc-el3-feature-availability.py \
   out/m7-secure-el3-handoff-state.txt \
   out/m7-smccc-el3-feature-availability-raw.txt \
-  out/m7-smccc-el3-feature-availability.txt
+  out/m7-smccc-el3-feature-availability.txt \
+  out/m7-pre-sec-smccc-route-authorization.txt
 ```
+
+The final gate rehashes the exact route-authorization report and all five collector/transport/emitter source components, then requires the serialized single-use authorization binding and bounded output-buffer geometry to match that report byte-for-byte. It also couples `SUPPORTED` to collector outcome `COMPLETE` and `NOT_SUPPORTED` to `FEATURE_UNAVAILABLE`. This closes the host-side evidence chain without turning the declared project-owner review into cryptographic attestation and without authorizing device launch, MMIO, persistent writes or slot changes.
 
 Schema `IZZOS_M7_SMCCC_EL3_FEATURE_AVAILABILITY_V1` permits only `SMCCC_VERSION` (`0x80000000`), `SMCCC_ARCH_FEATURES` (`0x80000001`), and the SMC64 `SMCCC_ARCH_FEATURE_AVAILABILITY` function (`0xC0000003`) under Arm Architecture Service owner zero. The exact register opcodes are pinned to `SCR_EL3`, `CPTR_EL3`, and `MDCR_EL3`. This follows the upstream [TF-A Arm Architecture Service implementation](https://github.com/ARM-software/arm-trusted-firmware/blob/master/services/arm_arch_svc/arm_arch_svc_setup.c) and its [identifier/mask definitions](https://github.com/ARM-software/arm-trusted-firmware/blob/master/include/services/arm_arch_svc.h).
 

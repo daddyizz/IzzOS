@@ -119,7 +119,7 @@ fi
 serialize "$TMP/supported-capture.txt" "$TMP/supported-raw-2.txt" "$TMP/supported-report-2.txt" >/dev/null
 cmp "$TMP/supported-raw.txt" "$TMP/supported-raw-2.txt"
 
-"$PYTHON" "$VERIFY" "$TMP/handoff.txt" "$TMP/supported-raw.txt" "$TMP/supported-gate.txt" >/dev/null
+"$PYTHON" "$VERIFY" "$TMP/handoff.txt" "$TMP/supported-raw.txt" "$TMP/supported-gate.txt" "$TMP/route-authorization.txt" >/dev/null
 grep -q '^classification: M7_SMCCC_EL3_FEATURE_AVAILABILITY_CORROBORATION_PASS$' "$TMP/supported-gate.txt"
 
 write_capture "$TMP/unsupported-capture.txt" FEATURE_UNAVAILABLE 2 0
@@ -131,7 +131,7 @@ serialize "$TMP/unsupported-capture.txt" "$TMP/unsupported-raw.txt" "$TMP/unsupp
 grep -q '^classification: M7_SMCCC_CAPTURE_SERIALIZATION_PASS$' "$TMP/unsupported-report.txt"
 grep -q '^feature-availability-support: NOT_SUPPORTED$' "$TMP/unsupported-raw.txt"
 grep -q '^feature-query-count: 0$' "$TMP/unsupported-raw.txt"
-"$PYTHON" "$VERIFY" "$TMP/handoff.txt" "$TMP/unsupported-raw.txt" "$TMP/unsupported-gate.txt" >/dev/null
+"$PYTHON" "$VERIFY" "$TMP/handoff.txt" "$TMP/unsupported-raw.txt" "$TMP/unsupported-gate.txt" "$TMP/route-authorization.txt" >/dev/null
 grep -q '^classification: M7_SMCCC_EL3_FEATURE_AVAILABILITY_ROUTE_UNSUPPORTED$' "$TMP/unsupported-gate.txt"
 
 assert_blocked() {
