@@ -12,6 +12,8 @@ entry-current-el: EL2
 observation-authenticity: SELF_REPORTED_NOT_INDEPENDENTLY_ATTESTED
 sec-wrapper-implementation-authorization: NO
 launch-authorization: NO
+entry-cntfrq-el0: 0x124F800
+entry-cntvoff-el2: 0x0
 classification: M7_QUALCOMM_ENTRY_OBSERVATION_SCHEMA_PASS
 EOF
 BASELINE_SHA="$(sha256sum "$TMP/baseline.txt" | awk '{print $1}')"
@@ -52,6 +54,10 @@ run_verify() {
 run_verify "$TMP/pass.txt" >/dev/null
 grep -q '^all-required-primary-cpu-id-registers-are-present: PASS$' "$TMP/pass.txt"
 grep -q '^el2-control-register-visibility-is-explicit: PASS$' "$TMP/pass.txt"
+grep -q '^baseline-counter-frequency-is-valid: PASS$' "$TMP/pass.txt"
+grep -q '^baseline-virtual-counter-offset-is-zero: PASS$' "$TMP/pass.txt"
+grep -q '^entry-cntfrq-el0: 0x124F800$' "$TMP/pass.txt"
+grep -q '^entry-cntvoff-el2: 0x0$' "$TMP/pass.txt"
 grep -q '^feature-sve: PRESENT$' "$TMP/pass.txt"
 grep -q '^feature-sme: ABSENT$' "$TMP/pass.txt"
 grep -q '^feature-fp: PRESENT$' "$TMP/pass.txt"

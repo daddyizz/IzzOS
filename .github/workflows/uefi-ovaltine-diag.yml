@@ -93,6 +93,9 @@ jobs:
       - name: Test M7 AArch64 extension-register inventory schema gate
         run: bash scripts/test-verify-m7-aarch64-extension-register-inventory.sh
 
+      - name: Test M7 AArch64 extension control-bit assessment
+        run: bash scripts/test-verify-m7-aarch64-extension-bit-assessment.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 

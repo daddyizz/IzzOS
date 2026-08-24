@@ -226,13 +226,37 @@ python3 scripts/verify-m7-aarch64-extension-register-inventory.py \
   out/m7-aarch64-extension-registers.txt
 ```
 
-Schema `IZZOS_M7_AARCH64_EXTENSION_REGISTERS_V1` carries `MIDR_EL1`, `MPIDR_EL1`, the relevant `ID_AA64*` feature registers, and raw `HCR_EL2`, `CPTR_EL2`, `CNTHCTL_EL2`, `MDCR_EL2`, `ICC_SRE_EL2`, `ZCR_EL2` and `SMCR_EL2` visibility. The verifier binds the inventory to the exact baseline-report hash, requires explicit EL2 visibility when the payload enters at EL2, and derives only basic feature presence such as FP/SIMD, SVE, SME, MTE and pointer authentication. This follows the upstream [AArch64 boot system-register requirements](https://www.kernel.org/doc/html/latest/arch/arm64/booting.html) and [CPU feature-register definitions](https://kernel.org/doc/html/next/arm64/cpu-feature-registers.html). A structurally complete result is:
+Schema `IZZOS_M7_AARCH64_EXTENSION_REGISTERS_V1` carries `MIDR_EL1`, `MPIDR_EL1`, the relevant `ID_AA64*` feature registers, and raw `HCR_EL2`, `CPTR_EL2`, `CNTHCTL_EL2`, `MDCR_EL2`, `ICC_SRE_EL2`, `ZCR_EL2` and `SMCR_EL2` visibility. The verifier binds the inventory to the exact baseline-report hash, propagates the baseline's validated `CNTFRQ_EL0` and `CNTVOFF_EL2` state, requires explicit EL2 visibility when the payload enters at EL2, and derives only basic feature presence such as FP/SIMD, SVE, SME, MTE and pointer authentication. This follows the upstream [AArch64 boot system-register requirements](https://www.kernel.org/doc/html/latest/arch/arm64/booting.html) and [CPU feature-register definitions](https://kernel.org/doc/html/next/arm64/cpu-feature-registers.html). A structurally complete result is:
 
 ```text
 M7_AARCH64_EXTENSION_REGISTER_INVENTORY_SCHEMA_PASS
 ```
 
 Raw inventory is not bit-compliance proof. Conditional extension requirements, cross-core consistency, independent snapshot authentication, wrapper implementation, DSC/FDF promotion, MMIO and launch remain blocked.
+
+## AArch64 extension control-bit assessment
+
+Evaluate the conditional control bits in an inventory report that already passed the raw-register schema gate:
+
+```bash
+python3 scripts/verify-m7-aarch64-extension-bit-assessment.py \
+  out/m7-aarch64-extension-registers.txt \
+  out/m7-aarch64-extension-bit-assessment.txt
+```
+
+For an EL1 entry, the assessor checks a bounded set of applicable upstream requirements in `HCR_EL2`, `CPTR_EL2`, `CNTHCTL_EL2` and `ICC_SRE_EL2`, including feature-dependent SVE, MTE and pointer-authentication controls. It also requires visible primary-CPU `CNTFRQ_EL0` and `CNTVOFF_EL2` state. SME is deliberately blocked until its additional `SCTLR_EL2`, fine-grained trap and version-dependent controls are represented. An EL1 report that satisfies every control bit covered by this gate is classified:
+
+```text
+M7_AARCH64_EXTENSION_BIT_ASSESSMENT_PASS
+```
+
+For an EL2 entry, EL1-specific EL2 controls are not treated as proof of the incoming EL2 state. The relevant Secure EL3 prerequisites cannot be observed from a non-secure EL2 snapshot, so the safe classification is:
+
+```text
+M7_AARCH64_EXTENSION_BIT_ASSESSMENT_DEFERRED_SECURE_EL3_EVIDENCE
+```
+
+This is not full upstream system-register compliance. Both results remain bound to a self-reported snapshot; Secure EL3 prerequisites, unassessed extensions, cross-core `CNTVOFF_EL2`/`ZCR_EL2`/`SMCR_EL2` consistency, independent authenticity, capture-route authorization, wrapper implementation, DSC/FDF promotion, MMIO and launch remain unproven and unauthorized.
 
 ## Still required before standalone DSC/FDF promotion
 
@@ -241,7 +265,7 @@ The following remain separate evidence gates:
 - actual FD size and alignment from a concrete SEC/PEI/DXE composition;
 - final runtime destination and FD base, plus exact Qualcomm FD-for-kernel replacement/relocation behavior beyond the bounded stock Linux arithmetic;
 - independently authenticated Qualcomm entry observation and capture route beyond the schema-only snapshot gate;
-- conditional extension-bit compliance, cross-core consistency and verified execution of the required SEC/PrePi wrapper beyond the raw-register inventory;
+- Secure EL3 extension-state evidence for an EL2 entry, cross-core consistency and verified execution of the required SEC/PrePi wrapper beyond the conditional bit assessment;
 - runtime GIC/timer/platform-init ownership and exception-level requirements beyond the bounded static-DTB enumeration;
 - exact temporary Android boot-container construction only after the input-binding gate and Qualcomm semantics both pass;
 - recovery and exact-device route authorization.
