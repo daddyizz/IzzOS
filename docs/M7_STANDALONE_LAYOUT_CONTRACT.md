@@ -215,6 +215,25 @@ M7_QUALCOMM_ENTRY_OBSERVATION_SCHEMA_PASS
 
 This classification is intentionally limited to schema and consistency validation. The snapshot remains self-reported rather than independently attested, and the capture route is not authorized by this gate. Extension-specific system registers, SEC equivalence, wrapper implementation, DSC/FDF promotion, MMIO, container construction and launch remain separately blocked.
 
+## AArch64 extension-register inventory schema gate
+
+Bind a future raw CPU-feature and EL2-control inventory to the exact baseline snapshot:
+
+```bash
+python3 scripts/verify-m7-aarch64-extension-register-inventory.py \
+  out/m7-qualcomm-entry-observation.txt \
+  out/m7-aarch64-extension-registers-raw.txt \
+  out/m7-aarch64-extension-registers.txt
+```
+
+Schema `IZZOS_M7_AARCH64_EXTENSION_REGISTERS_V1` carries `MIDR_EL1`, `MPIDR_EL1`, the relevant `ID_AA64*` feature registers, and raw `HCR_EL2`, `CPTR_EL2`, `CNTHCTL_EL2`, `MDCR_EL2`, `ICC_SRE_EL2`, `ZCR_EL2` and `SMCR_EL2` visibility. The verifier binds the inventory to the exact baseline-report hash, requires explicit EL2 visibility when the payload enters at EL2, and derives only basic feature presence such as FP/SIMD, SVE, SME, MTE and pointer authentication. This follows the upstream [AArch64 boot system-register requirements](https://www.kernel.org/doc/html/latest/arch/arm64/booting.html) and [CPU feature-register definitions](https://kernel.org/doc/html/next/arm64/cpu-feature-registers.html). A structurally complete result is:
+
+```text
+M7_AARCH64_EXTENSION_REGISTER_INVENTORY_SCHEMA_PASS
+```
+
+Raw inventory is not bit-compliance proof. Conditional extension requirements, cross-core consistency, independent snapshot authentication, wrapper implementation, DSC/FDF promotion, MMIO and launch remain blocked.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
@@ -222,7 +241,7 @@ The following remain separate evidence gates:
 - actual FD size and alignment from a concrete SEC/PEI/DXE composition;
 - final runtime destination and FD base, plus exact Qualcomm FD-for-kernel replacement/relocation behavior beyond the bounded stock Linux arithmetic;
 - independently authenticated Qualcomm entry observation and capture route beyond the schema-only snapshot gate;
-- extension-specific system-register requirements and verified execution of the required SEC/PrePi wrapper;
+- conditional extension-bit compliance, cross-core consistency and verified execution of the required SEC/PrePi wrapper beyond the raw-register inventory;
 - runtime GIC/timer/platform-init ownership and exception-level requirements beyond the bounded static-DTB enumeration;
 - exact temporary Android boot-container construction only after the input-binding gate and Qualcomm semantics both pass;
 - recovery and exact-device route authorization.
