@@ -378,6 +378,29 @@ M7_SMCCC_COLLECTOR_SOURCE_CONTRACT_PASS
 
 The prototype is not device-route authorization. Its real transport must not be linked or invoked until a separate gate proves the exact pre-SEC non-secure EL2 route, recovery context and capture-output binding.
 
+## Exact pre-SEC SMCCC collector route authorization
+
+Validate a future reviewed route record before allowing the real collector transport to be invoked:
+
+```bash
+python3 scripts/verify-m7-pre-sec-smccc-route-authorization.py \
+  out/m7-standalone-sec-entry-requirements.txt \
+  out/m7-qualcomm-entry-observation.txt \
+  out/m2-recovery-evidence.txt \
+  out/m7-pre-sec-smccc-route-evidence.txt \
+  out/m7-pre-sec-smccc-route-authorization.txt
+```
+
+Schema `IZZOS_M7_PRE_SEC_SMCCC_ROUTE_AUTHORIZATION_V1` fail-closes unless the route binds the exact SEC requirement and Qualcomm entry-observation reports, verified hard-recovery evidence, collector/transport/emitter source identities, and one aligned non-secure pre-SEC output buffer. The observed entry must be non-secure EL2 on the primary CPU. The route permits exactly one collector invocation, caps the Arm Architecture Service sequence at five calls, and fixes the allowed functions to `SMCCC_VERSION`, `SMCCC_ARCH_FEATURES`, and `SMCCC_ARCH_FEATURE_AVAILABILITY`.
+
+Vendor/SiP SMCs, direct EL3 register reads, secure-monitor changes, MMIO, device or persistent writes, slot changes, flash/erase/format actions and payload launch must all remain forbidden. Tests reject changed evidence/source hashes, duplicate fields, EL1 routes, repeated invocation, extra calls, unsafe or undersized buffers, assisted-only recovery, write claims and relaxed launch policy. A structurally complete future record is:
+
+```text
+M7_PRE_SEC_SMCCC_ROUTE_AUTHORIZATION_PASS
+```
+
+The authorization scope is one bound feature-availability capture only; it is not payload-launch permission. The gate records project-owner review but does not claim cryptographic attestation. The current exact CPH2413 evidence remains blocked because hard recovery is only `ASSISTED_HARD_RECOVERY_DOCUMENTED` and the temporary route remains candidate-only.
+
 ## Deterministic collector transcript emitter
 
 `M7SmcccCaptureTranscript` converts only a structurally valid `M7_SMCCC_CAPTURE` into `IZZOS_M7_SMCCC_COLLECTOR_CAPTURE_V1`. It reconstructs the call list from compile-time FIDs and the canonical register-opcode array; no caller-supplied FID, opcode, call count or outcome text is rendered. Only `COMPLETE` and `FEATURE_UNAVAILABLE` captures are serializable. Version, discovery, count, opcode and per-query status invariants must all match the collector state machine.
@@ -421,7 +444,7 @@ The following remain separate evidence gates:
 - actual FD size and alignment from a concrete SEC/PEI/DXE composition;
 - final runtime destination and FD base, plus exact Qualcomm FD-for-kernel replacement/relocation behavior beyond the bounded stock Linux arithmetic;
 - independently authenticated Qualcomm entry observation and capture route beyond the schema-only snapshot gate;
-- an authorized exact pre-SEC non-secure EL2 route for the non-integrated collector, independently authenticated EL3-owned handoff evidence beyond the self-reported schema and optional sanitized SMCCC corroboration, the exact Qualcomm EL3/internal coherency implementation beyond the public PSCI/SMC boundary, and verified execution of the required SEC/PrePi wrapper;
+- a passing exact pre-SEC non-secure EL2 route-authorization artifact for the non-integrated collector (current assisted-only recovery and candidate route do not pass), independently authenticated EL3-owned handoff evidence beyond the self-reported schema and optional sanitized SMCCC corroboration, the exact Qualcomm EL3/internal coherency implementation beyond the public PSCI/SMC boundary, and verified execution of the required SEC/PrePi wrapper;
 - runtime GIC/timer/platform-init ownership and exception-level requirements beyond the bounded static-DTB enumeration;
 - exact temporary Android boot-container construction only after the input-binding gate and Qualcomm semantics both pass;
 - recovery and exact-device route authorization.
