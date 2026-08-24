@@ -317,6 +317,28 @@ M7_SM8475_COHERENCY_PROVENANCE_BOUNDARY_PASS
 
 This result proves only the public firmware-interface boundary: secondary CPU enable/power control is exposed through PSCI over SMC. The public OnePlus files do not disclose an exact SM8475 coherency register, mask, or firmware sequence. The gate therefore rejects invented `CPUECTLR_EL1.SMPEN` claims, guessed MMIO addresses, or any attempt to turn this source provenance into wrapper, DSC/FDF, or launch authorization.
 
+## Secure EL3 handoff-state assertion schema gate
+
+Bind a future EL3-owned handoff record to the exact extension inventory/assessment, bound-DTB GIC evidence, and SM8475 coherency provenance report:
+
+```bash
+python3 scripts/verify-m7-secure-el3-handoff-state.py \
+  out/m7-aarch64-extension-registers.txt \
+  out/m7-aarch64-extension-bit-assessment.txt \
+  out/m7-gic-timer-dtb.txt \
+  out/m7-sm8475-coherency-provenance.txt \
+  out/m7-secure-el3-handoff-state-raw.txt \
+  out/m7-secure-el3-handoff-state.txt
+```
+
+Schema `IZZOS_M7_SECURE_EL3_HANDOFF_STATE_V1` accepts only a record explicitly generated at EL3 by the existing platform firmware; it rejects any claim that non-secure EL2 directly read EL3-only registers. The bounded no-trap profile requires a non-secure AArch64 EL2 target, SMC/HVC availability, the GICv3 system-register interface, cross-CPU `SCR_EL3.FIQ` and `ICC_CTLR_EL3.PMHE` assertions, and only the extension controls applicable to features enumerated in the bound inventory. These requirements follow the upstream [AArch64 Linux boot contract](https://www.kernel.org/doc/html/latest/arch/arm64/booting.html) and the reference [TF-A EL3 context setup](https://github.com/ARM-software/arm-trusted-firmware/blob/master/lib/el3_runtime/aarch64/context_mgmt.c). A structurally complete record is:
+
+```text
+M7_SECURE_EL3_HANDOFF_ASSERTION_SCHEMA_PASS
+```
+
+This remains a schema-only result. The record is self-reported, its capture route is not independently authorized, and feature controls absent from the current inventory are not assessed. It does not prove Secure EL3 compliance or authorize secure-monitor changes, wrapper implementation, DSC/FDF promotion, MMIO, or launch.
+
 ## Still required before standalone DSC/FDF promotion
 
 The following remain separate evidence gates:
@@ -324,7 +346,7 @@ The following remain separate evidence gates:
 - actual FD size and alignment from a concrete SEC/PEI/DXE composition;
 - final runtime destination and FD base, plus exact Qualcomm FD-for-kernel replacement/relocation behavior beyond the bounded stock Linux arithmetic;
 - independently authenticated Qualcomm entry observation and capture route beyond the schema-only snapshot gate;
-- Secure EL3 extension-state evidence for an EL2 entry, the exact Qualcomm EL3/internal coherency implementation beyond the public PSCI/SMC boundary, and verified execution of the required SEC/PrePi wrapper;
+- independently authenticated EL3-owned handoff evidence beyond the self-reported schema, the exact Qualcomm EL3/internal coherency implementation beyond the public PSCI/SMC boundary, and verified execution of the required SEC/PrePi wrapper;
 - runtime GIC/timer/platform-init ownership and exception-level requirements beyond the bounded static-DTB enumeration;
 - exact temporary Android boot-container construction only after the input-binding gate and Qualcomm semantics both pass;
 - recovery and exact-device route authorization.
