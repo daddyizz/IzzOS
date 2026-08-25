@@ -49,6 +49,29 @@ classification: PROVENANCE_COMPLETE
 
 `PROVENANCE_COMPLETE` proves that the co-located image bytes match the manifest's basename, size and SHA256 and that the source claim is present. It does **not** validate boot format, recovery readiness, temporary-launch support, or permission to launch. Exact CPH2413 inputs must additionally pass `verify-exact-stock-hash-lock.sh` against the committed exact-build lock.
 
+## Content-bound route evidence gate
+
+A manifest reference or `TEMPORARY_ROUTE_VALIDATED` text value is not sufficient. Route-specific packaging additionally requires a co-located route-evidence record and the four artifacts named by schema `IZZOS_TEMPORARY_ROUTE_EVIDENCE_V1`:
+
+- before-state;
+- route transcript;
+- diagnostic output; and
+- after-state/stock-return confirmation.
+
+Run:
+
+```bash
+bash scripts/verify-m2-route-evidence.sh m2-manifest.txt route-evidence.txt
+```
+
+Required result:
+
+```text
+classification: TEMPORARY_ROUTE_EVIDENCE_CONTENT_BOUND
+```
+
+The verifier recalculates every artifact's byte size and SHA256 and rejects missing, renamed, path-shaped or modified inputs. This is a content-integrity gate, not independent proof that a claimed physical observation is authentic.
+
 ## Packaging invariants
 
 Any future M2 package must:
@@ -97,7 +120,7 @@ out/m2-launch/<firmware-id>/
 - expected bootloader mode
 - selected launch route
 - persistent writes: `FORBIDDEN`
-- route validation evidence reference
+- route validation evidence basename plus content-bound artifact records
 - stock input SHA256/provenance references
 
 ## Route decision states

@@ -53,6 +53,7 @@ Selected launch route: NONE
 Route decision: INSUFFICIENT_DEVICE_DATA
 Persistent writes: FORBIDDEN
 Slot changes: FORBIDDEN
+Route validation evidence reference: NONE
 EOF
 
 cat > "${LOG_DIR}/packaging-report.txt" <<EOF

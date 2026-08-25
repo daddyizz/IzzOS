@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -lt 5 ]]; then
-  echo "Usage: $0 <inspection.txt> <m2-manifest.txt> <recovery-evidence.txt> <exact-stock-hash-lock.txt> <stock-manifest...>" >&2
+if [[ $# -lt 6 ]]; then
+  echo "Usage: $0 <inspection.txt> <m2-manifest.txt> <recovery-evidence.txt> <route-evidence.txt> <exact-stock-hash-lock.txt> <stock-manifest...>" >&2
   exit 2
 fi
 
 INSPECTION="$1"
 M2_MANIFEST="$2"
 RECOVERY="$3"
-STOCK_HASH_LOCK="$4"
-shift 4
+ROUTE_EVIDENCE="$4"
+STOCK_HASH_LOCK="$5"
+shift 5
 STOCK_MANIFESTS=("$@")
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -34,7 +35,8 @@ run_gate "exact stock content lock" bash "$ROOT_DIR/scripts/verify-exact-stock-h
 run_gate "M2 evidence bundle consistency" bash "$ROOT_DIR/scripts/verify-m2-evidence-bundle.sh" "$INSPECTION" "$M2_MANIFEST" "${STOCK_MANIFESTS[@]}"
 run_gate "recovery evidence" bash "$ROOT_DIR/scripts/verify-m2-recovery-evidence.sh" "$RECOVERY"
 run_gate "evidence freshness" bash "$ROOT_DIR/scripts/verify-evidence-freshness.sh" "$INSPECTION" "$M2_MANIFEST" "$RECOVERY"
-run_gate "route authorization" bash "$ROOT_DIR/scripts/verify-m2-route-authorization.sh" "$M2_MANIFEST" "$RECOVERY"
+run_gate "content-bound route evidence" bash "$ROOT_DIR/scripts/verify-m2-route-evidence.sh" "$M2_MANIFEST" "$ROUTE_EVIDENCE"
+run_gate "route authorization" bash "$ROOT_DIR/scripts/verify-m2-route-authorization.sh" "$M2_MANIFEST" "$RECOVERY" "$ROUTE_EVIDENCE"
 
 printf '\n'
 if [[ ${#blockers[@]} -eq 0 ]]; then

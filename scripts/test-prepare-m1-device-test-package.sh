@@ -40,8 +40,32 @@ Selected launch route: OEM_UEFI_CHAINLOAD
 Route decision: TEMPORARY_ROUTE_VALIDATED
 Persistent writes: FORBIDDEN
 Slot changes: FORBIDDEN
-Route validation evidence reference: synthetic-route-evidence.txt
+Route validation evidence reference: route-evidence.txt
 EOF
+
+for role in before-state route-transcript diagnostic-output after-state; do
+  printf 'synthetic-%s-%s\n' "$role" "$BUILD" > "$ROOT/$role.txt"
+done
+{
+  echo 'Schema: IZZOS_TEMPORARY_ROUTE_EVIDENCE_V1'
+  echo 'Target: OnePlus 10T 5G / CPH2415 / ovaltine / SM8475'
+  echo "Firmware ID: $BUILD"
+  echo 'Selected launch route: OEM_UEFI_CHAINLOAD'
+  echo 'Route decision: TEMPORARY_ROUTE_VALIDATED'
+  echo 'Device execution observed: YES'
+  echo 'Diagnostic payload reached: YES'
+  echo 'Controlled result recorded: YES'
+  echo 'Stock boot restored: YES'
+  echo 'Persistent writes observed: NO'
+  echo 'Slot change observed: NO'
+  echo 'User data mutation observed: NO'
+  echo 'Required artifact roles: before-state route-transcript diagnostic-output after-state'
+  for role in before-state route-transcript diagnostic-output after-state; do
+    file="$ROOT/$role.txt"
+    printf 'Artifact record: %s|%s.txt|%s|%s\n' \
+      "$role" "$role" "$(stat -c '%s' "$file")" "$(sha256sum "$file" | awk '{print $1}')"
+  done
+} > "$ROOT/route-evidence.txt"
 
 cat > "$ROOT/recovery.txt" <<EOF
 Device model/product: OnePlus 10T 5G / CPH2415
@@ -113,13 +137,18 @@ record() {
 
 OUT="$(bash scripts/prepare-m1-device-test-package.sh \
   "$EFI" "$ROOT/payload.txt" "$ROOT/inspection.txt" "$ROOT/m2.txt" "$ROOT/recovery.txt" \
-  "$ROOT/stock-lock.txt" "$ROOT/out" \
+  "$ROOT/route-evidence.txt" "$ROOT/stock-lock.txt" "$ROOT/out" \
   "$ROOT/boot.txt" "$ROOT/vendor_boot.txt" "$ROOT/dtbo.txt" "$ROOT/vbmeta.txt")"
 grep -q '^classification: M1_DEVICE_TEST_PACKAGE_ASSEMBLED$' <<<"$OUT"
 PACKAGE_DIR="$(sed -n 's/^package-dir: //p' <<<"$OUT")"
 test -f "$PACKAGE_DIR/payload/OvaltineDiag.efi"
 test -f "$PACKAGE_DIR/PACKAGE_INFO.txt"
 test -f "$PACKAGE_DIR/SHA256SUMS"
+test -f "$PACKAGE_DIR/evidence/route/route-evidence.txt"
+test -f "$PACKAGE_DIR/evidence/route/before-state.txt"
+test -f "$PACKAGE_DIR/evidence/route/route-transcript.txt"
+test -f "$PACKAGE_DIR/evidence/route/diagnostic-output.txt"
+test -f "$PACKAGE_DIR/evidence/route/after-state.txt"
 grep -q '^Launch commands included: NO$' "$PACKAGE_DIR/PACKAGE_INFO.txt"
 grep -q '^Device commands executed by assembler: NO$' "$PACKAGE_DIR/PACKAGE_INFO.txt"
 (
@@ -130,7 +159,7 @@ grep -q '^Device commands executed by assembler: NO$' "$PACKAGE_DIR/PACKAGE_INFO
 printf 'tamper\n' >> "$EFI"
 if bash scripts/prepare-m1-device-test-package.sh \
   "$EFI" "$ROOT/payload.txt" "$ROOT/inspection.txt" "$ROOT/m2.txt" "$ROOT/recovery.txt" \
-  "$ROOT/stock-lock.txt" "$ROOT/out2" \
+  "$ROOT/route-evidence.txt" "$ROOT/stock-lock.txt" "$ROOT/out2" \
   "$ROOT/boot.txt" "$ROOT/vendor_boot.txt" "$ROOT/dtbo.txt" "$ROOT/vbmeta.txt" >/dev/null 2>&1; then
   echo 'FAIL: modified EFI must not assemble a device-test package' >&2
   exit 1
