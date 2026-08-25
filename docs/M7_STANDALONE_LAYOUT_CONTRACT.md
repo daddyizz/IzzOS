@@ -1,6 +1,6 @@
 # M7 Standalone Firmware Layout Contract
 
-Status: **host-side region contract implemented; launch remains blocked**
+Status: **internal host-side evidence/security gate implementation complete; launch remains blocked**
 
 This document uses the internal M1 engineering sequence. Internal Milestone 7 is not the product-roadmap milestone named “M7 — Core Device Drivers.” It is the standalone-firmware layout step inside the overall M1 UEFI bring-up.
 
@@ -856,6 +856,44 @@ M7_RECOVERED_CHECKPOINT_EXTERNAL_DISTRIBUTION_PASS_CONTINUOUS_MONITORING_REQUIRE
 ```
 
 This result validates signed one-shot observations only. It performs no network request and cannot prove continuous availability or discover a newer checkpoint withheld from all supplied channels. Continuous independent monitoring remains a separate gate; no device command, key write, wrapper execution, promotion, container construction or launch is authorized.
+
+## Recovered-checkpoint bounded-monitoring gate
+
+Validate a finite synchronized monitoring window over all three replacement-root-pinned channels, without contacting those channels or changing repository or device state:
+
+```bash
+python3 scripts/verify-m7-recovered-checkpoint-bounded-monitoring.py \
+  out/m7-recovered-checkpoint-external-distribution-verification.txt \
+  out/m7-recovered-checkpoint-external-distribution-policy.txt \
+  out/m7-governance-root-recovery-checkpoint.txt \
+  out/m7-replacement-governance-root-manifest.txt \
+  out/m7-replacement-governance-root-public-key.pem \
+  out/m7-recovered-checkpoint-bounded-monitoring-mandate.txt \
+  out/m7-replacement-root-monitoring-mandate-signature.bin \
+  out/m7-distribution-channel-1-public-key.pem \
+  out/m7-distribution-channel-1-monitoring-journal.txt \
+  out/m7-distribution-channel-1-monitoring-signature.bin \
+  out/m7-distribution-channel-2-public-key.pem \
+  out/m7-distribution-channel-2-monitoring-journal.txt \
+  out/m7-distribution-channel-2-monitoring-signature.bin \
+  out/m7-distribution-channel-3-public-key.pem \
+  out/m7-distribution-channel-3-monitoring-journal.txt \
+  out/m7-distribution-channel-3-monitoring-signature.bin \
+  2026-08-25T00:56:00Z \
+  out/m7-recovered-checkpoint-bounded-monitoring-verification.txt
+```
+
+The replacement root signs canonical mandate `IZZOS_M7_RECOVERED_CHECKPOINT_BOUNDED_MONITORING_MANDATE_V1`, binding the exact external-distribution report, policy, recovered checkpoint, epoch/sequence, three independent HTTPS channel identities and a 45-minute monitoring window. Each pinned channel signs a canonical `IZZOS_M7_RECOVERED_CHECKPOINT_BOUNDED_MONITORING_JOURNAL_V1` containing four synchronized exact-hash availability observations.
+
+All three journals must use identical round timestamps from the mandated start through end, with positive gaps no greater than 900 seconds. The final round must be no more than 300 seconds old at verification. A missing or rogue signature, stale final observation, oversized gap, changed checkpoint, repeated operator, epoch rollback, duplicate field or signed write/launch claim fails closed.
+
+A consistent supplied monitoring window is classified:
+
+```text
+M7_RECOVERED_CHECKPOINT_BOUNDED_MONITORING_PASS_INTERNAL_HOST_SECURITY_CHAIN_COMPLETE
+```
+
+Together with the preceding gates and the complete 36-script CI suite, this closes the internal M7 host-side evidence/security gate implementation milestone. The scope is deliberately finite: indefinite availability, unseen checkpoints outside the monitored channels, physical execution evidence and product-roadmap M1 completion are not claimed. No network request, device command, key write, wrapper execution, promotion, container construction or launch is performed.
 
 ## Still required before standalone DSC/FDF promotion
 

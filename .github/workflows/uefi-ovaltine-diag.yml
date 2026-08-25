@@ -168,6 +168,9 @@ jobs:
       - name: Test M7 recovered-checkpoint external-distribution gate
         run: bash scripts/test-verify-m7-recovered-checkpoint-external-distribution.sh
 
+      - name: Test M7 recovered-checkpoint bounded-monitoring gate
+        run: bash scripts/test-verify-m7-recovered-checkpoint-bounded-monitoring.sh
+
       - name: Test stock image provenance gate
         run: bash scripts/test-verify-stock-image-provenance.sh
 
