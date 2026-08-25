@@ -17,8 +17,13 @@ on:
       - 'docs/M12_SIGNED_ROUTE_ATTESTATION.md'
       - 'docs/M13_ROUTE_ATTESTER_KEY_GOVERNANCE.md'
       - 'docs/M14_REPOSITORY_GOVERNANCE_ROOT_ENROLLMENT.md'
+      - 'docs/M15_GOVERNANCE_ROOT_CONTINUITY.md'
       - 'config/m2-route-governance-root-enrollment.txt'
       - 'config/m2-route-governance-root-test-public.pem'
+      - 'config/m2-route-governance-root-next-test-public.pem'
+      - 'config/m2-route-governance-recovery-custodian-1-test-public.pem'
+      - 'config/m2-route-governance-recovery-custodian-2-test-public.pem'
+      - 'config/m2-route-governance-recovery-custodian-3-test-public.pem'
       - 'docs/CPH2413_15.0.0.1901_EX01_STOCK_HASHES.txt'
       - '.github/workflows/uefi-ovaltine-diag.yml'
   pull_request:
@@ -35,8 +40,13 @@ on:
       - 'docs/M12_SIGNED_ROUTE_ATTESTATION.md'
       - 'docs/M13_ROUTE_ATTESTER_KEY_GOVERNANCE.md'
       - 'docs/M14_REPOSITORY_GOVERNANCE_ROOT_ENROLLMENT.md'
+      - 'docs/M15_GOVERNANCE_ROOT_CONTINUITY.md'
       - 'config/m2-route-governance-root-enrollment.txt'
       - 'config/m2-route-governance-root-test-public.pem'
+      - 'config/m2-route-governance-root-next-test-public.pem'
+      - 'config/m2-route-governance-recovery-custodian-1-test-public.pem'
+      - 'config/m2-route-governance-recovery-custodian-2-test-public.pem'
+      - 'config/m2-route-governance-recovery-custodian-3-test-public.pem'
       - 'docs/CPH2413_15.0.0.1901_EX01_STOCK_HASHES.txt'
       - '.github/workflows/uefi-ovaltine-diag.yml'
 
@@ -229,6 +239,9 @@ jobs:
 
       - name: Test M2 repository governance-root enrollment contract
         run: bash scripts/test-verify-m2-route-governance-root-enrollment.sh
+
+      - name: Test M2 governance-root continuity and anti-rollback
+        run: bash scripts/test-verify-m2-route-governance-root-continuity.sh
 
       - name: Test M2 evidence tamper detection
         run: bash scripts/test-evidence-bundle-index.sh

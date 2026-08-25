@@ -54,4 +54,4 @@ Internal M14 is complete when:
 6. no private key is committed and every successful report remains non-authorizing; and
 7. the complete host suite and CI pass without device interaction.
 
-Internal M15 adds monotonic root-transition, recovery-policy and anti-rollback publication mechanics. Production root provisioning and exact-device evidence remain outside this test enrollment.
+Internal M15 adds a host-test emergency root-recovery transition, replacement-root possession proof and monotonic anti-rollback checkpoint without changing the M14 anchor in place. Production root provisioning and exact-device evidence remain outside this test enrollment.

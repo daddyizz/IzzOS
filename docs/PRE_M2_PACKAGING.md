@@ -113,6 +113,12 @@ python3 scripts/verify-m2-route-governance-root-enrollment.py \
 
 The committed anchor is explicitly `HOST_TEST_ONLY_NOT_PRODUCTION`. Its pass classification remains production-root-required and continues to withhold packaging and launch authorization. No private governance key is stored in the repository.
 
+## Governance-root recovery continuity boundary
+
+Internal M15 validates an emergency transition away from the exact M14 host-test root without replacing that anchor silently. The transition must revoke the old root, bind the exact M14 report and repository enrollment, pin three distinct repository test-custodian keys, carry at least two valid custodian signatures, and carry a replacement-root possession signature. The replacement root must also sign a monotonic anti-rollback checkpoint.
+
+The M15 classification remains host-test-only and requires production custody plus physical device evidence. It does not authorize route-specific packaging or launch.
+
 ## Packaging invariants
 
 Any future M2 package must:

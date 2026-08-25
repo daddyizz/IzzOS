@@ -49,6 +49,8 @@ A detached signature can be checked with `verify-m2-route-attestation.py`. Inter
 
 Internal M14 validates fixed-path repository enrollment mechanics against an explicitly host-test-only public anchor. This does not turn test trust into production custody and does not reduce the requirement for genuine exact-device route observations.
 
+Internal M15 validates host-test root-recovery continuity and an anti-rollback checkpoint. These trust-chain mechanics still cannot observe whether the phone executed a temporary route or returned to unchanged stock state.
+
 ## Packaging requirement
 
 `OvaltineDiag.efi` by itself is an EFI application, not an Android boot image. Even if temporary boot is supported, IzzOS still needs a non-destructive packaging/chain-load layer compatible with the OnePlus 10T boot image format and OEM boot chain.
