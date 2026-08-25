@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -lt 7 ]]; then
-  echo "Usage: $0 <OvaltineDiag.efi> <payload-manifest.txt> <inspection.txt> <m2-manifest.txt> <recovery-evidence.txt> <output-dir> <stock-manifest...>" >&2
+if [[ $# -lt 8 ]]; then
+  echo "Usage: $0 <OvaltineDiag.efi> <payload-manifest.txt> <inspection.txt> <m2-manifest.txt> <recovery-evidence.txt> <exact-stock-hash-lock.txt> <output-dir> <stock-manifest...>" >&2
   exit 2
 fi
 
@@ -11,13 +11,14 @@ PAYLOAD_MANIFEST="$2"
 INSPECTION="$3"
 M2_MANIFEST="$4"
 RECOVERY="$5"
-OUTPUT_ROOT="$6"
-shift 6
+STOCK_HASH_LOCK="$6"
+OUTPUT_ROOT="$7"
+shift 7
 STOCK_MANIFESTS=("$@")
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-for f in "$EFI" "$PAYLOAD_MANIFEST" "$INSPECTION" "$M2_MANIFEST" "$RECOVERY" "${STOCK_MANIFESTS[@]}"; do
+for f in "$EFI" "$PAYLOAD_MANIFEST" "$INSPECTION" "$M2_MANIFEST" "$RECOVERY" "$STOCK_HASH_LOCK" "${STOCK_MANIFESTS[@]}"; do
   [[ -f "$f" ]] || { echo "ERROR: required input missing: $f" >&2; exit 2; }
 done
 
@@ -46,7 +47,7 @@ if [[ "$ACTUAL_SHA" != "$EXPECTED_SHA" || "$ACTUAL_SIZE" != "$EXPECTED_SIZE" ]];
   exit 1
 fi
 
-READINESS_OUT="$(bash "$ROOT_DIR/scripts/report-m2-readiness.sh" "$INSPECTION" "$M2_MANIFEST" "$RECOVERY" "${STOCK_MANIFESTS[@]}" 2>&1)" || {
+READINESS_OUT="$(bash "$ROOT_DIR/scripts/report-m2-readiness.sh" "$INSPECTION" "$M2_MANIFEST" "$RECOVERY" "$STOCK_HASH_LOCK" "${STOCK_MANIFESTS[@]}" 2>&1)" || {
   echo "$READINESS_OUT" >&2
   echo "ERROR: host-side M2 readiness gates are not complete" >&2
   exit 1
@@ -78,6 +79,7 @@ cp "$PAYLOAD_MANIFEST" "$PACKAGE_DIR/payload/M1_CURRENT_PAYLOAD.txt"
 cp "$INSPECTION" "$PACKAGE_DIR/evidence/device-inspection.txt"
 cp "$M2_MANIFEST" "$PACKAGE_DIR/evidence/m2-route-manifest.txt"
 cp "$RECOVERY" "$PACKAGE_DIR/evidence/recovery-evidence.txt"
+cp "$STOCK_HASH_LOCK" "$PACKAGE_DIR/evidence/stock/exact-stock-hash-lock.txt"
 
 index=0
 for manifest in "${STOCK_MANIFESTS[@]}"; do

@@ -43,7 +43,7 @@ bash scripts/create-stock-image-provenance.sh \
   '<extraction-method>'
 ```
 
-The generated manifest records the exact filename, byte size and SHA256 and is checked by `verify-stock-image-provenance.sh`.
+The generated manifest records the exact filename, byte size and SHA256 and is checked by `verify-stock-image-provenance.sh`. The image must remain beside its manifest; verification recomputes its size and SHA256, rejects path-shaped filenames and fails if any required field is duplicated.
 
 For multiple images, all manifests must also pass:
 
@@ -52,6 +52,22 @@ bash scripts/verify-stock-image-set.sh <manifest-1> <manifest-2> [...]
 ```
 
 This blocks mixed-build, mixed-device and duplicate-role sets.
+
+For the exact CPH2413 build lock, also run:
+
+```bash
+bash scripts/verify-exact-stock-hash-lock.sh \
+  docs/CPH2413_15.0.0.1901_EX01_STOCK_HASHES.txt \
+  <boot-manifest> <vendor-boot-manifest> <dtbo-manifest> <vbmeta-manifest>
+```
+
+Required content-bound classification before these exact local files can be accepted as engineering inputs:
+
+```text
+EXACT_STOCK_IMAGE_LOCK_PASS
+```
+
+Running the verifier with the lock file alone validates only the committed schema and returns `EXACT_STOCK_HASH_LOCK_VALID`; it does not claim that proprietary image bytes are locally present.
 
 ## Acceptance rules
 

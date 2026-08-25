@@ -95,7 +95,8 @@ Required verification sequence after acquisition:
 1. create provenance manifests with scripts/create-stock-image-provenance.sh
 2. verify each manifest with scripts/verify-stock-image-provenance.sh
 3. verify same-build set with scripts/verify-stock-image-set.sh
-4. analyze exact stock boot metadata before route-specific packaging
+4. verify the complete content-bound set with scripts/verify-exact-stock-hash-lock.sh and the exact-build lock
+5. analyze exact stock boot metadata before route-specific packaging
 
 Extraction authorized: NO
 Device writes authorized: NO

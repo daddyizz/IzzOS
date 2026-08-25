@@ -47,7 +47,7 @@ Required result before the image may be trusted as an engineering input:
 classification: PROVENANCE_COMPLETE
 ```
 
-`PROVENANCE_COMPLETE` only proves that the image source is auditable. It does **not** validate boot format, recovery readiness, temporary-launch support, or permission to launch.
+`PROVENANCE_COMPLETE` proves that the co-located image bytes match the manifest's basename, size and SHA256 and that the source claim is present. It does **not** validate boot format, recovery readiness, temporary-launch support, or permission to launch. Exact CPH2413 inputs must additionally pass `verify-exact-stock-hash-lock.sh` against the committed exact-build lock.
 
 ## Packaging invariants
 

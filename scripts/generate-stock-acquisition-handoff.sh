@@ -95,8 +95,9 @@ Post-acquisition verification
 -----------------------------
 1. verify every generated *.provenance.txt with scripts/verify-stock-image-provenance.sh
 2. verify the complete same-build set with scripts/verify-stock-image-set.sh
-3. analyze exact stock boot metadata before any route-specific packaging
-4. preserve original images and provenance manifests unchanged; do not commit proprietary stock images to the public repository
+3. verify the complete set against docs/CPH2413_15.0.0.1901_EX01_STOCK_HASHES.txt with scripts/verify-exact-stock-hash-lock.sh
+4. analyze exact stock boot metadata before any route-specific packaging
+5. preserve original images and provenance manifests unchanged; do not commit proprietary stock images to the public repository
 
 Hard stop
 ---------

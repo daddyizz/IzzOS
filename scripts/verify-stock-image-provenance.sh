@@ -24,6 +24,12 @@ bad_placeholder_regex='^(unknown|n/a|na|none|todo|tbd|unset|unvalidated|-)?$'
 
 missing=0
 for field in "${required_fields[@]}"; do
+  count="$(awk -F': ' -v key="$field" '$1 == key {count++} END {print count + 0}' "$MANIFEST")"
+  if [[ "$count" -ne 1 ]]; then
+    echo "ERROR: required provenance field must appear exactly once: $field" >&2
+    missing=1
+    continue
+  fi
   value="$(awk -F': ' -v key="$field" '$1 == key {sub("^[^:]+:[[:space:]]*", ""); print; exit}' "$MANIFEST")"
   if [[ -z "$value" || "${value,,}" =~ $bad_placeholder_regex ]]; then
     echo "ERROR: required provenance field missing/placeholder: $field" >&2
@@ -33,6 +39,7 @@ done
 
 sha="$(awk -F': ' '$1 == "Image SHA256" {print $2; exit}' "$MANIFEST" | tr 'A-F' 'a-f')"
 size="$(awk -F': ' '$1 == "Image size bytes" {print $2; exit}' "$MANIFEST")"
+name="$(awk -F': ' '$1 == "Image file" {print $2; exit}' "$MANIFEST")"
 
 if [[ ! "$sha" =~ ^[0-9a-f]{64}$ ]]; then
   echo "ERROR: Image SHA256 must be exactly 64 hexadecimal characters" >&2
@@ -44,10 +51,31 @@ if [[ ! "$size" =~ ^[1-9][0-9]*$ ]]; then
   missing=1
 fi
 
+if [[ -z "$name" || "$name" != "$(basename "$name")" || "$name" == *'/'* || "$name" == *'\'* ]]; then
+  echo "ERROR: Image file must be a basename without path components" >&2
+  missing=1
+fi
+
 if [[ "$missing" -ne 0 ]]; then
   echo "classification: PROVENANCE_INCOMPLETE_BLOCKED"
   exit 1
 fi
 
+image_path="$(dirname "$MANIFEST")/$name"
+if [[ ! -f "$image_path" ]]; then
+  echo "ERROR: provenance image is not co-located with its manifest: $name" >&2
+  echo "classification: PROVENANCE_IMAGE_MISSING_BLOCKED"
+  exit 1
+fi
+
+actual_size="$(stat -c '%s' "$image_path")"
+actual_sha="$(sha256sum "$image_path" | awk '{print $1}')"
+if [[ "$actual_size" != "$size" || "$actual_sha" != "$sha" ]]; then
+  echo "ERROR: image bytes do not match the recorded size/SHA256" >&2
+  echo "classification: PROVENANCE_CONTENT_MISMATCH_BLOCKED"
+  exit 1
+fi
+
 echo "classification: PROVENANCE_COMPLETE"
-echo "decision: provenance is auditable, but this does not authorize route-specific packaging or device launch."
+echo "content-binding: PASS"
+echo "decision: the co-located image bytes match the auditable provenance record, but this does not authorize route-specific packaging or device launch."

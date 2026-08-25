@@ -33,4 +33,11 @@ if bash scripts/verify-stock-image-provenance.sh "$ROOT/bad-field.txt" >/dev/nul
   exit 1
 fi
 
+printf 'mutation\n' >> "$ROOT/boot.img"
+if bash scripts/verify-stock-image-provenance.sh "$MANIFEST" >"$ROOT/content-mismatch.out" 2>&1; then
+  echo "FAIL: mutated image unexpectedly matched its provenance" >&2
+  exit 1
+fi
+grep -q '^classification: PROVENANCE_CONTENT_MISMATCH_BLOCKED$' "$ROOT/content-mismatch.out"
+
 echo "stock image provenance round-trip tests: PASS"

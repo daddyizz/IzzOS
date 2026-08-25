@@ -12,6 +12,8 @@ on:
       - 'docs/M7_STANDALONE_LAYOUT_CONTRACT.md'
       - 'docs/M8_DEVICE_ATTENDANCE_HANDOFF.md'
       - 'docs/M9_EXACT_DEVICE_EVIDENCE_BINDING.md'
+      - 'docs/M10_CONTENT_BOUND_STOCK_ACCEPTANCE.md'
+      - 'docs/CPH2413_15.0.0.1901_EX01_STOCK_HASHES.txt'
       - '.github/workflows/uefi-ovaltine-diag.yml'
   pull_request:
     paths:
@@ -22,6 +24,8 @@ on:
       - 'docs/M7_STANDALONE_LAYOUT_CONTRACT.md'
       - 'docs/M8_DEVICE_ATTENDANCE_HANDOFF.md'
       - 'docs/M9_EXACT_DEVICE_EVIDENCE_BINDING.md'
+      - 'docs/M10_CONTENT_BOUND_STOCK_ACCEPTANCE.md'
+      - 'docs/CPH2413_15.0.0.1901_EX01_STOCK_HASHES.txt'
       - '.github/workflows/uefi-ovaltine-diag.yml'
 
 jobs:
@@ -189,6 +193,9 @@ jobs:
 
       - name: Test stock image set consistency
         run: bash scripts/test-stock-image-set.sh
+
+      - name: Test exact-build content-bound stock hash lock
+        run: bash scripts/test-verify-exact-stock-hash-lock.sh
 
       - name: Test M2 evidence bundle consistency
         run: bash scripts/test-verify-m2-evidence-bundle.sh

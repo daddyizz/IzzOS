@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -lt 4 ]]; then
-  echo "Usage: $0 <inspection.txt> <m2-manifest.txt> <recovery-evidence.txt> <stock-manifest...>" >&2
+if [[ $# -lt 5 ]]; then
+  echo "Usage: $0 <inspection.txt> <m2-manifest.txt> <recovery-evidence.txt> <exact-stock-hash-lock.txt> <stock-manifest...>" >&2
   exit 2
 fi
 
 INSPECTION="$1"
 M2_MANIFEST="$2"
 RECOVERY="$3"
-shift 3
+STOCK_HASH_LOCK="$4"
+shift 4
 STOCK_MANIFESTS=("$@")
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -29,6 +30,7 @@ run_gate() {
 printf 'IzzOS M2 readiness report\n'
 printf '==========================\n'
 run_gate "stock image set consistency" bash "$ROOT_DIR/scripts/verify-stock-image-set.sh" "${STOCK_MANIFESTS[@]}"
+run_gate "exact stock content lock" bash "$ROOT_DIR/scripts/verify-exact-stock-hash-lock.sh" "$STOCK_HASH_LOCK" "${STOCK_MANIFESTS[@]}"
 run_gate "M2 evidence bundle consistency" bash "$ROOT_DIR/scripts/verify-m2-evidence-bundle.sh" "$INSPECTION" "$M2_MANIFEST" "${STOCK_MANIFESTS[@]}"
 run_gate "recovery evidence" bash "$ROOT_DIR/scripts/verify-m2-recovery-evidence.sh" "$RECOVERY"
 run_gate "evidence freshness" bash "$ROOT_DIR/scripts/verify-evidence-freshness.sh" "$INSPECTION" "$M2_MANIFEST" "$RECOVERY"
