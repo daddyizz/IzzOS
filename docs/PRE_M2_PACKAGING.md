@@ -72,6 +72,19 @@ classification: TEMPORARY_ROUTE_EVIDENCE_CONTENT_BOUND
 
 The verifier recalculates every artifact's byte size and SHA256 and rejects missing, renamed, path-shaped or modified inputs. This is a content-integrity gate, not independent proof that a claimed physical observation is authentic.
 
+## Signed route-attestation boundary
+
+Internal M12 can cryptographically verify an independent attester's detached Ed25519 endorsement of the exact M2 manifest and content-bound route-evidence bytes:
+
+```bash
+python3 scripts/verify-m2-route-attestation.py \
+  m2-manifest.txt route-evidence.txt trusted-key-manifest.txt \
+  authority-public-key.pem signed-envelope.txt detached-signature.bin \
+  2026-08-25T00:00:00Z route-attestation-report.txt
+```
+
+The current success classification, `M2_ROUTE_ATTESTATION_SIGNATURE_PASS_KEY_GOVERNANCE_REQUIRED`, is deliberately non-authorizing. Until the pinned attester key has independently reviewed custody, revocation and rotation governance, the report must continue to state `route-specific-packaging-authorization: NO` and `payload-launch-authorization: NO`.
+
 ## Packaging invariants
 
 Any future M2 package must:

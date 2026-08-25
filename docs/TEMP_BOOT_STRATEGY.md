@@ -45,6 +45,8 @@ Before a route can be marked validated, IzzOS must have route-specific evidence 
 
 The physical route record must also pass `verify-m2-route-evidence.sh`. A manifest that merely names a missing evidence path, or artifacts whose current bytes no longer match their recorded size/SHA256, cannot advance to route-specific packaging.
 
+A detached signature can be checked with `verify-m2-route-attestation.py`, but the M12 signature-pass classification remains non-authorizing until the independent attester key has reviewed custody, revocation and rotation governance. A valid signature proves key endorsement of bytes, not physical truth by itself.
+
 ## Packaging requirement
 
 `OvaltineDiag.efi` by itself is an EFI application, not an Android boot image. Even if temporary boot is supported, IzzOS still needs a non-destructive packaging/chain-load layer compatible with the OnePlus 10T boot image format and OEM boot chain.

@@ -43,5 +43,4 @@ Internal M11 is complete when:
 5. mutation, missing-role, path, target and firmware-drift cases fail closed; and
 6. the full host suite and CI pass without interacting with a phone.
 
-The current CPH2413 route remains unvalidated. Product M1 cannot claim `TEMPORARY_ROUTE_VALIDATED` until genuine exact-device observations and their co-located artifacts pass this gate, in addition to the exact-stock and recovery gates.
-
+The current CPH2413 route remains unvalidated. Product M1 cannot claim `TEMPORARY_ROUTE_VALIDATED` until genuine exact-device observations and their co-located artifacts pass this gate, in addition to the exact-stock and recovery gates. Internal M12 adds a detached-signature endorsement layer but intentionally withholds packaging/launch authorization until attester-key governance exists.
