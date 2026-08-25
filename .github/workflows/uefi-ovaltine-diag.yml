@@ -18,6 +18,8 @@ on:
       - 'docs/M13_ROUTE_ATTESTER_KEY_GOVERNANCE.md'
       - 'docs/M14_REPOSITORY_GOVERNANCE_ROOT_ENROLLMENT.md'
       - 'docs/M15_GOVERNANCE_ROOT_CONTINUITY.md'
+      - 'docs/M16_GOVERNANCE_CHECKPOINT_HISTORY.md'
+      - 'config/m2-route-governance-checkpoint-history-test-anchor.txt'
       - 'config/m2-route-governance-root-enrollment.txt'
       - 'config/m2-route-governance-root-test-public.pem'
       - 'config/m2-route-governance-root-next-test-public.pem'
@@ -41,6 +43,8 @@ on:
       - 'docs/M13_ROUTE_ATTESTER_KEY_GOVERNANCE.md'
       - 'docs/M14_REPOSITORY_GOVERNANCE_ROOT_ENROLLMENT.md'
       - 'docs/M15_GOVERNANCE_ROOT_CONTINUITY.md'
+      - 'docs/M16_GOVERNANCE_CHECKPOINT_HISTORY.md'
+      - 'config/m2-route-governance-checkpoint-history-test-anchor.txt'
       - 'config/m2-route-governance-root-enrollment.txt'
       - 'config/m2-route-governance-root-test-public.pem'
       - 'config/m2-route-governance-root-next-test-public.pem'
@@ -242,6 +246,9 @@ jobs:
 
       - name: Test M2 governance-root continuity and anti-rollback
         run: bash scripts/test-verify-m2-route-governance-root-continuity.sh
+
+      - name: Test M2 governance checkpoint-history and fork detection
+        run: bash scripts/test-verify-m2-route-governance-checkpoint-history.sh
 
       - name: Test M2 evidence tamper detection
         run: bash scripts/test-evidence-bundle-index.sh

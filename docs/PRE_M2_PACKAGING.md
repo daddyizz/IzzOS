@@ -119,6 +119,12 @@ Internal M15 validates an emergency transition away from the exact M14 host-test
 
 The M15 classification remains host-test-only and requires production custody plus physical device evidence. It does not authorize route-specific packaging or launch.
 
+## Governance checkpoint-history boundary
+
+Internal M16 fixes the exact M15 predecessor material and signed head checkpoint in a repository-owned canonical history anchor. The verifier rejects a changed predecessor, alternate same-epoch head, rollback, invalid signature, expired checkpoint or unsafe authorization claim.
+
+Its pass classification remains host-test-only and requires a production append-only publication mechanism, independent custody and genuine physical route evidence. It does not authorize packaging or launch.
+
 ## Packaging invariants
 
 Any future M2 package must:

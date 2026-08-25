@@ -62,4 +62,4 @@ Internal M15 is complete when:
 7. no private key is committed and all success remains non-authorizing; and
 8. the complete host suite and CI pass without device interaction.
 
-The next product-M1 boundary is physical: collect genuine exact-device stock and temporary-route execution evidence, then prove controlled return to unchanged stock state. No phone command is authorized by M15 itself.
+Internal M16 additionally binds this signed checkpoint to exact predecessor material and a repository-published head so an alternate same-epoch history fails closed. The next product-M1 boundary remains physical: collect genuine exact-device stock and temporary-route execution evidence, then prove controlled return to unchanged stock state. No phone command is authorized by M15 itself.
