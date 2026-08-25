@@ -57,6 +57,8 @@ Internal M15 validates host-test root-recovery continuity and an anti-rollback c
 
 The package must be derived from the exact stock boot/vendor_boot format rather than guessed from an older Snapdragon target. See `docs/PRE_M2_PACKAGING.md` for the route-neutral packaging contract.
 
+Exact-stock ABL/LinuxLoader static analysis may enumerate `fastboot`, boot-image and command-related strings with `analyze-linuxloader-fastboot-strings.py`. This narrows reverse-engineering targets but is deliberately non-authorizing: a string does not prove that its handler is reachable on the exact bootloader, that `fastboot boot` is accepted, or that an arbitrary wrapper will return safely to stock.
+
 ## Exit condition
 
 This strategy advances from research to validated only when we can demonstrate a repeatable procedure that:

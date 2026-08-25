@@ -100,6 +100,9 @@ jobs:
       - name: Test exact-stock AArch64 kernel header analyzer
         run: bash scripts/test-analyze-stock-aarch64-kernel-header.sh
 
+      - name: Test exact-stock LinuxLoader fastboot/boot string analyzer
+        run: bash scripts/test-analyze-linuxloader-fastboot-strings.sh
+
       - name: Test M6 exact stock kernel-region geometry verifier
         run: bash scripts/test-verify-m1-kernel-region-geometry.sh
 
