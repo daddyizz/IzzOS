@@ -59,6 +59,8 @@ The package must be derived from the exact stock boot/vendor_boot format rather 
 
 Exact-stock ABL/LinuxLoader static analysis may enumerate `fastboot`, boot-image and command-related strings with `analyze-linuxloader-fastboot-strings.py`. This narrows reverse-engineering targets but is deliberately non-authorizing: a string does not prove that its handler is reachable on the exact bootloader, that `fastboot boot` is accepted, or that an arbitrary wrapper will return safely to stock.
 
+The AOSP fastboot protocol defines `boot` as booting previously downloaded data as a normal `boot.img`: https://android.googlesource.com/platform/system/core/+/refs/tags/android-cts-7.0_r33/fastboot/fastboot_protocol.txt. The exact CPH2413 LinuxLoader contains a `boot` command token and an unlocked-state diagnostic for that command. Protocol semantics plus static handler evidence strengthen the candidate classification only; they do not replace an exact-device runtime observation or the recovery gate.
+
 ## Exit condition
 
 This strategy advances from research to validated only when we can demonstrate a repeatable procedure that:
