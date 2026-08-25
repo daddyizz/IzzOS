@@ -106,7 +106,7 @@ The core OS experience should stay lightweight and free from desktop, lock-scree
 
 **Project stage:** Early platform bring-up  
 **Current milestone:** M1 — Non-Destructive UEFI Diagnostic Payload  
-**Internal engineering checkpoint:** M13 route-attester key-governance mechanics implemented; product M1 awaits an enrolled independently controlled governance root, exact stock acceptance and genuine route evidence<br>
+**Internal engineering checkpoint:** M14 repository governance-root enrollment contract implemented with an explicitly non-production host-test anchor; product M1 still awaits production independent custody, exact stock acceptance and genuine route evidence<br>
 **Reference target:** OnePlus 10T 5G / `ovaltine` / SM8475
 
 This project is experimental. Do not flash or repartition a device based on incomplete bring-up work.

@@ -47,6 +47,8 @@ The physical route record must also pass `verify-m2-route-evidence.sh`. A manife
 
 A detached signature can be checked with `verify-m2-route-attestation.py`. Internal M13 can additionally validate root-signed custody, rotation and revocation records with `verify-m2-route-attester-governance.py`, but its root is still caller supplied rather than repository enrolled. Both success classifications remain non-authorizing: signatures prove key endorsement of bytes, not physical truth by themselves.
 
+Internal M14 validates fixed-path repository enrollment mechanics against an explicitly host-test-only public anchor. This does not turn test trust into production custody and does not reduce the requirement for genuine exact-device route observations.
+
 ## Packaging requirement
 
 `OvaltineDiag.efi` by itself is an EFI application, not an Android boot image. Even if temporary boot is supported, IzzOS still needs a non-destructive packaging/chain-load layer compatible with the OnePlus 10T boot image format and OEM boot chain.

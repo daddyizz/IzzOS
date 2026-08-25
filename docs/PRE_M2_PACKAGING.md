@@ -100,6 +100,19 @@ python3 scripts/verify-m2-route-attester-governance.py \
 
 Its success classification, `M2_ROUTE_ATTESTER_GOVERNANCE_SIGNATURE_PASS_ROOT_ENROLLMENT_REQUIRED`, remains non-authorizing because the root is caller pinned and not enrolled by the repository. It does not establish independent custody, authenticate a physical observation or permit route-specific packaging or launch.
 
+## Repository root-enrollment contract boundary
+
+Internal M14 fixes a host-test governance public key and canonical enrollment record at repository-owned paths. `verify-m2-route-governance-root-enrollment.py` rejects any M13 root manifest or public-key bytes that do not match that exact SHA256-pinned enrollment:
+
+```bash
+python3 scripts/verify-m2-route-governance-root-enrollment.py \
+  route-governance-report.txt governance-root-manifest.txt \
+  governance-root-public-key.pem 2026-08-25T00:00:00Z \
+  root-enrollment-report.txt
+```
+
+The committed anchor is explicitly `HOST_TEST_ONLY_NOT_PRODUCTION`. Its pass classification remains production-root-required and continues to withhold packaging and launch authorization. No private governance key is stored in the repository.
+
 ## Packaging invariants
 
 Any future M2 package must:

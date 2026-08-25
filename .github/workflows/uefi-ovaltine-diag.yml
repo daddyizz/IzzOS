@@ -16,6 +16,9 @@ on:
       - 'docs/M11_CONTENT_BOUND_ROUTE_EVIDENCE.md'
       - 'docs/M12_SIGNED_ROUTE_ATTESTATION.md'
       - 'docs/M13_ROUTE_ATTESTER_KEY_GOVERNANCE.md'
+      - 'docs/M14_REPOSITORY_GOVERNANCE_ROOT_ENROLLMENT.md'
+      - 'config/m2-route-governance-root-enrollment.txt'
+      - 'config/m2-route-governance-root-test-public.pem'
       - 'docs/CPH2413_15.0.0.1901_EX01_STOCK_HASHES.txt'
       - '.github/workflows/uefi-ovaltine-diag.yml'
   pull_request:
@@ -31,6 +34,9 @@ on:
       - 'docs/M11_CONTENT_BOUND_ROUTE_EVIDENCE.md'
       - 'docs/M12_SIGNED_ROUTE_ATTESTATION.md'
       - 'docs/M13_ROUTE_ATTESTER_KEY_GOVERNANCE.md'
+      - 'docs/M14_REPOSITORY_GOVERNANCE_ROOT_ENROLLMENT.md'
+      - 'config/m2-route-governance-root-enrollment.txt'
+      - 'config/m2-route-governance-root-test-public.pem'
       - 'docs/CPH2413_15.0.0.1901_EX01_STOCK_HASHES.txt'
       - '.github/workflows/uefi-ovaltine-diag.yml'
 
@@ -220,6 +226,9 @@ jobs:
 
       - name: Test M2 route-attester key governance
         run: bash scripts/test-verify-m2-route-attester-governance.sh
+
+      - name: Test M2 repository governance-root enrollment contract
+        run: bash scripts/test-verify-m2-route-governance-root-enrollment.sh
 
       - name: Test M2 evidence tamper detection
         run: bash scripts/test-evidence-bundle-index.sh

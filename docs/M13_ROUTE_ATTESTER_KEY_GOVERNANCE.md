@@ -72,4 +72,4 @@ Internal M13 is complete when:
 6. success still withholds packaging and launch authorization; and
 7. the complete host suite and CI pass without device interaction.
 
-The next trust gate is repository-enforced enrollment of an independently controlled governance root, including a reviewed root-replacement and emergency-recovery procedure. Exact stock acceptance and genuine physical route evidence remain separate prerequisites.
+Internal M14 implements the repository-enforcement contract with an explicitly non-production host-test public anchor. Production enrollment with independently controlled custody, plus a monotonic root-transition/recovery publication chain, remains required. Exact stock acceptance and genuine physical route evidence are separate prerequisites.
