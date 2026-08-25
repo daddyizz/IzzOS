@@ -23,6 +23,8 @@ Device writes: NONE
 Launch commands executed: NO
 EOF
   printf 'Classification: %s\n' "$class" > "$dir/ovaltine-inspection-analysis.txt"
+  printf 'privacy-safe raw fixture\n' > "$dir/ovaltine-inspection.txt"
+  (cd "$dir" && sha256sum ovaltine-inspection.txt ovaltine-inspection-analysis.txt INSPECTION_SUMMARY.txt > SHA256SUMS)
 }
 
 make_dir "$TMP_DIR/adb" yes NEED_EXACT_FASTBOOT_INSPECTION 'CPH2413_15.0.0.1901(EX01)' unknown unknown unknown
@@ -33,6 +35,8 @@ grep -q '^Classification: M1_EXACT_DEVICE_EVIDENCE_CONSISTENT$' "$TMP_DIR/out-ok
 grep -q '^Build ID: CPH2413_15.0.0.1901(EX01)$' "$TMP_DIR/out-ok/M1_EXACT_DEVICE_EVIDENCE.txt"
 grep -q '^Current slot: a$' "$TMP_DIR/out-ok/M1_EXACT_DEVICE_EVIDENCE.txt"
 grep -q '^Fastboot target observation: platform-compatible$' "$TMP_DIR/out-ok/M1_EXACT_DEVICE_EVIDENCE.txt"
+grep -q '^ADB checksum manifest SHA256: [0-9a-f]\{64\}$' "$TMP_DIR/out-ok/M1_EXACT_DEVICE_EVIDENCE.txt"
+grep -q '^Fastboot checksum manifest SHA256: [0-9a-f]\{64\}$' "$TMP_DIR/out-ok/M1_EXACT_DEVICE_EVIDENCE.txt"
 grep -q '^Launch authorization: NO$' "$TMP_DIR/out-ok/M1_EXACT_DEVICE_EVIDENCE.txt"
 ( cd "$TMP_DIR/out-ok" && sha256sum -c SHA256SUMS >/dev/null )
 
@@ -50,5 +54,14 @@ if bash "$MERGER" "$TMP_DIR/adb-bad" "$TMP_DIR/fastboot" "$TMP_DIR/out-adb-bad" 
   exit 1
 fi
 grep -q '^Blocker: ADB capture does not positively match ovaltine$' "$TMP_DIR/out-adb-bad/M1_EXACT_DEVICE_EVIDENCE.txt"
+
+cp -R "$TMP_DIR/adb" "$TMP_DIR/adb-tampered"
+printf 'tampered\n' >> "$TMP_DIR/adb-tampered/INSPECTION_SUMMARY.txt"
+if bash "$MERGER" "$TMP_DIR/adb-tampered" "$TMP_DIR/fastboot" "$TMP_DIR/out-tampered" >/dev/null 2>&1; then
+  echo "ERROR: tampered ADB evidence must be blocked" >&2
+  exit 1
+fi
+grep -q '^Classification: M1_EXACT_DEVICE_EVIDENCE_BLOCKED$' "$TMP_DIR/out-tampered/M1_EXACT_DEVICE_EVIDENCE.txt"
+grep -q '^Blocker: ADB evidence checksum manifest is invalid, incomplete or tampered$' "$TMP_DIR/out-tampered/M1_EXACT_DEVICE_EVIDENCE.txt"
 
 echo "M1 exact-device evidence merge tests: PASS"

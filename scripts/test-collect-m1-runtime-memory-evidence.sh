@@ -41,13 +41,17 @@ if [[ "${1:-}" == "shell" ]]; then
     "test -d '/sys/firmware/devicetree/base'") exit 1 ;;
     "test -r '/proc/device-tree/memory/reg'") exit 0 ;;
     "test -r '/proc/device-tree/memory@0/reg'") exit 1 ;;
+    "cat '/proc/device-tree/memory/reg' >/dev/null 2>&1") exit 0 ;;
+    "cat '/proc/device-tree/memory@0/reg' >/dev/null 2>&1") exit 1 ;;
     "test -d '/proc/device-tree/reserved-memory'") exit 0 ;;
     "ls -1 '/proc/device-tree/reserved-memory' 2>/dev/null") printf '#address-cells\nhyp_region@80000000\nranges\n' ;;
     "test -d '/proc/device-tree/reserved-memory/hyp_region@80000000'") exit 0 ;;
     "test -r '/proc/device-tree/reserved-memory/hyp_region@80000000/reg'") exit 0 ;;
+    "cat '/proc/device-tree/reserved-memory/hyp_region@80000000/reg' >/dev/null 2>&1") exit 0 ;;
     "test -e '/proc/device-tree/reserved-memory/hyp_region@80000000/no-map'") exit 0 ;;
     "test -e '/proc/device-tree/reserved-memory/hyp_region@80000000/reusable'") exit 1 ;;
     "test -r '/proc/device-tree/chosen/linux,usable-memory-range'") exit 1 ;;
+    "cat '/proc/device-tree/chosen/linux,usable-memory-range' >/dev/null 2>&1") exit 1 ;;
     "cat /proc/iomem") echo '80000000-ffffffff : System RAM' ;;
     *grep*'/proc/meminfo'*) echo 'MemTotal:       16000000 kB' ;;
     *) exit 1 ;;

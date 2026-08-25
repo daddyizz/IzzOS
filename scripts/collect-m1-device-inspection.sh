@@ -21,6 +21,9 @@ bash "$ROOT_DIR/scripts/analyze-ovaltine-inspection.sh" "$RAW" | tee "$ANALYSIS"
 
 CLASSIFICATION="$(awk -F': ' '/^Classification:/ {print $2; exit}' "$ANALYSIS")"
 TARGET_MATCH="$(awk -F': ' '/^Target match:/ {print $2; exit}' "$ANALYSIS")"
+ADB_PROTOCOL_VERSION="$(awk -F': ' '/^ADB protocol version:/ {print $2; exit}' "$ANALYSIS")"
+ADB_PLATFORM_VERSION="$(awk -F': ' '/^ADB Platform-Tools version:/ {print $2; exit}' "$ANALYSIS")"
+FASTBOOT_TOOL_VERSION="$(awk -F': ' '/^Fastboot version:/ {print $2; exit}' "$ANALYSIS")"
 BUILD_ID="$(awk -F': ' '/^Build ID:/ {print $2; exit}' "$ANALYSIS")"
 CURRENT_SLOT="$(awk -F': ' '/^Current slot:/ {print $2; exit}' "$ANALYSIS")"
 UNLOCKED="$(awk -F': ' '/^Unlocked:/ {print $2; exit}' "$ANALYSIS")"
@@ -31,6 +34,9 @@ IzzOS M1 exact-device inspection summary
 Target: OnePlus 10T 5G / ovaltine / SM8475
 Target match: ${TARGET_MATCH:-unknown}
 Classification: ${CLASSIFICATION:-INSUFFICIENT_DATA}
+ADB protocol version: ${ADB_PROTOCOL_VERSION:-unknown}
+ADB Platform-Tools version: ${ADB_PLATFORM_VERSION:-unknown}
+Fastboot version: ${FASTBOOT_TOOL_VERSION:-unknown}
 Build ID: ${BUILD_ID:-unknown}
 Current slot: ${CURRENT_SLOT:-unknown}
 Bootloader unlocked: ${UNLOCKED:-unknown}

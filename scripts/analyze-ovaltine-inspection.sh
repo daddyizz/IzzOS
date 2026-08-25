@@ -45,7 +45,22 @@ fastboot_value() {
   ' "${INPUT}" | trim
 }
 
+host_value() {
+  local label="$1"
+  awk -v label="${label}:" '
+    index($0, label) == 1 {
+      sub("^[^:]+:[[:space:]]*", "")
+      print
+      exit
+    }
+  ' "${INPUT}" | trim
+}
+
 lower() { tr '[:upper:]' '[:lower:]'; }
+
+ADB_PROTOCOL_VERSION="$(host_value adb-protocol-version || true)"
+ADB_PLATFORM_VERSION="$(host_value adb-platform-tools-version || true)"
+FASTBOOT_TOOL_VERSION="$(host_value fastboot-version || true)"
 
 MODEL="$(adb_value model || true)"
 DEVICE="$(adb_value device || true)"
@@ -78,6 +93,29 @@ FB_PRODUCT_LC="$(printf '%s' "${FB_PRODUCT}" | lower)"
 UNLOCKED_LC="$(printf '%s' "${FB_UNLOCKED}" | lower)"
 USERSPACE_LC="$(printf '%s' "${FB_USERSPACE}" | lower)"
 
+TOOLCHAIN_BLOCK_REASON=""
+if grep -q '^adb-protocol-version:' "${INPUT}"; then
+  if [[ ! "${ADB_PROTOCOL_VERSION}" =~ ^1\.0\.([0-9]+)$ ]] || [[ "${BASH_REMATCH[1]:-0}" -lt 41 ]]; then
+    TOOLCHAIN_BLOCK_REASON="adb protocol is older than 1.0.41 or could not be verified"
+  elif [[ "${ADB_PLATFORM_VERSION}" != "unknown" && -n "${ADB_PLATFORM_VERSION}" ]]; then
+    adb_platform_major="${ADB_PLATFORM_VERSION%%.*}"
+    if [[ ! "$adb_platform_major" =~ ^[0-9]+$ || "$adb_platform_major" -lt 37 ]]; then
+      TOOLCHAIN_BLOCK_REASON="adb Platform-Tools is older than the project minimum (37.x)"
+    fi
+  fi
+fi
+
+if grep -q '^fastboot-version:' "${INPUT}"; then
+  fastboot_major="${FASTBOOT_TOOL_VERSION%%.*}"
+  if [[ ! "$fastboot_major" =~ ^[0-9]+$ || "$fastboot_major" -lt 37 ]]; then
+    if [[ -n "$TOOLCHAIN_BLOCK_REASON" ]]; then
+      TOOLCHAIN_BLOCK_REASON+="; fastboot is older than 37.x or could not be verified"
+    else
+      TOOLCHAIN_BLOCK_REASON="fastboot is older than 37.x or could not be verified"
+    fi
+  fi
+fi
+
 TARGET_MATCH="unknown"
 if [[ -n "${DEVICE_LC}" || -n "${PRODUCT_LC}" || -n "${VENDOR_DEVICE_LC}" || -n "${FB_PRODUCT_LC}" ]]; then
   if [[ "${DEVICE_LC}" == "ovaltine" || "${PRODUCT_LC}" == *"ovaltine"* || "${FB_PRODUCT_LC}" == *"ovaltine"* ]]; then
@@ -101,6 +139,9 @@ if [[ "${ADB_COUNT:-}" =~ ^[0-9]+$ && "${ADB_OTHER_COUNT:-0}" =~ ^[0-9]+$ && $((
    [[ "${FASTBOOT_COUNT:-}" =~ ^[0-9]+$ && "${FASTBOOT_COUNT}" -gt 1 ]]; then
   CLASSIFICATION="DEVICE_SELECTION_AMBIGUOUS_BLOCKED"
   NEXT_GATE="Disconnect every unrelated device and repeat the privacy-safe inspection with exactly one target in one transport mode."
+elif [[ -n "$TOOLCHAIN_BLOCK_REASON" ]]; then
+  CLASSIFICATION="DEVICE_TOOLCHAIN_REQUIRED"
+  NEXT_GATE="Install or select current official Android SDK Platform-Tools (project minimum 37.x), then repeat the inspection. Host finding: $TOOLCHAIN_BLOCK_REASON."
 elif [[ "${TARGET_MATCH}" == "no" ]]; then
   CLASSIFICATION="TARGET_MISMATCH_BLOCKED"
   NEXT_GATE="Stop M1 launch preparation until the exact OnePlus 10T / ovaltine target is confirmed."
@@ -137,6 +178,12 @@ IzzOS M1 capability assessment
 ==============================
 Target match: ${TARGET_MATCH}
 Classification: ${CLASSIFICATION}
+
+Observed host toolchain
+-----------------------
+ADB protocol version: ${ADB_PROTOCOL_VERSION:-unknown}
+ADB Platform-Tools version: ${ADB_PLATFORM_VERSION:-unknown}
+Fastboot version: ${FASTBOOT_TOOL_VERSION:-unknown}
 
 Observed Android-side data
 --------------------------

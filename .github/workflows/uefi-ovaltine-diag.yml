@@ -11,6 +11,7 @@ on:
       - 'docs/M1_STANDALONE_FIRMWARE_BRINGUP.md'
       - 'docs/M7_STANDALONE_LAYOUT_CONTRACT.md'
       - 'docs/M8_DEVICE_ATTENDANCE_HANDOFF.md'
+      - 'docs/M9_EXACT_DEVICE_EVIDENCE_BINDING.md'
       - '.github/workflows/uefi-ovaltine-diag.yml'
   pull_request:
     paths:
@@ -20,6 +21,7 @@ on:
       - 'docs/M1_STANDALONE_FIRMWARE_BRINGUP.md'
       - 'docs/M7_STANDALONE_LAYOUT_CONTRACT.md'
       - 'docs/M8_DEVICE_ATTENDANCE_HANDOFF.md'
+      - 'docs/M9_EXACT_DEVICE_EVIDENCE_BINDING.md'
       - '.github/workflows/uefi-ovaltine-diag.yml'
 
 jobs:
@@ -37,6 +39,12 @@ jobs:
 
       - name: Test privacy-safe device attendance and capability analyzer
         run: bash scripts/test-analyze-ovaltine-inspection.sh
+
+      - name: Test deterministic Android Platform-Tools selection
+        run: bash scripts/test-android-platform-tools-selection.sh
+
+      - name: Test host fastboot toolchain gate
+        run: bash scripts/test-check-host-fastboot-toolchain.sh
 
       - name: Test one-command read-only device inspection collector
         run: bash scripts/test-collect-m1-device-inspection.sh

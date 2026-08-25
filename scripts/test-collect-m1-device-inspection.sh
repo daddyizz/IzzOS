@@ -11,6 +11,14 @@ mkdir -p "$MOCK"
 cat > "$MOCK/adb" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
+if [[ "${1:-}" == "version" ]]; then
+  case "${MOCK_ADB_TOOL_VERSION:-modern}" in
+    modern) printf 'Android Debug Bridge version 1.0.41\nVersion 37.0.0-TEST\n' ;;
+    legacy) printf 'Android Debug Bridge version 1.0.31\n' ;;
+    *) exit 1 ;;
+  esac
+  exit 0
+fi
 if [[ "${1:-}" == "devices" ]]; then
   case "${MOCK_ADB_STATE:-authorized}" in
     authorized) printf 'List of devices attached\nSERIAL123\tdevice\n' ;;
@@ -44,6 +52,14 @@ chmod +x "$MOCK/adb"
 cat > "$MOCK/fastboot" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
+if [[ "${1:-}" == "--version" ]]; then
+  case "${MOCK_FASTBOOT_TOOL_VERSION:-modern}" in
+    modern) echo 'fastboot version 37.0.0-TEST' ;;
+    legacy) echo 'fastboot version 34.0.5-TEST' ;;
+    *) exit 1 ;;
+  esac
+  exit 0
+fi
 if [[ "${1:-}" == "devices" ]]; then
   case "${MOCK_FASTBOOT_STATE:-connected}" in
     connected) printf 'SERIAL123\tfastboot\n' ;;
@@ -73,9 +89,11 @@ EOF
 chmod +x "$MOCK/fastboot"
 
 OUT1="$TMP/candidate"
-PATH="$MOCK:$PATH" bash "$COLLECTOR" "$OUT1" >/dev/null
+ADB_BIN="$MOCK/adb" FASTBOOT_BIN="$MOCK/fastboot" PATH="$MOCK:$PATH" bash "$COLLECTOR" "$OUT1" >/dev/null
 
 grep -q '^Classification: CLASSIC_FASTBOOT_CANDIDATE_UNVERIFIED$' "$OUT1/INSPECTION_SUMMARY.txt"
+grep -q '^ADB Platform-Tools version: 37.0.0$' "$OUT1/INSPECTION_SUMMARY.txt"
+grep -q '^Fastboot version: 37.0.0$' "$OUT1/INSPECTION_SUMMARY.txt"
 grep -q '^Target match: yes$' "$OUT1/INSPECTION_SUMMARY.txt"
 grep -q '^Build ID: CPH2415_16.0.0.TEST$' "$OUT1/INSPECTION_SUMMARY.txt"
 grep -q '^Current slot: a$' "$OUT1/INSPECTION_SUMMARY.txt"
@@ -91,14 +109,14 @@ if grep -R -q 'SERIAL123' "$OUT1"; then
 fi
 
 OUT2="$TMP/adb-only"
-MOCK_FASTBOOT_STATE=disconnected PATH="$MOCK:$PATH" bash "$COLLECTOR" "$OUT2" >/dev/null
+MOCK_FASTBOOT_STATE=disconnected ADB_BIN="$MOCK/adb" FASTBOOT_BIN="$MOCK/fastboot" PATH="$MOCK:$PATH" bash "$COLLECTOR" "$OUT2" >/dev/null
 
 grep -q '^Classification: NEED_EXACT_FASTBOOT_INSPECTION$' "$OUT2/INSPECTION_SUMMARY.txt"
 grep -q '^Target match: yes$' "$OUT2/INSPECTION_SUMMARY.txt"
 (cd "$OUT2" && sha256sum -c SHA256SUMS >/dev/null)
 
 OUT3="$TMP/adb-unauthorized"
-MOCK_ADB_STATE=unauthorized MOCK_FASTBOOT_STATE=disconnected PATH="$MOCK:$PATH" bash "$COLLECTOR" "$OUT3" >/dev/null
+MOCK_ADB_STATE=unauthorized MOCK_FASTBOOT_STATE=disconnected ADB_BIN="$MOCK/adb" FASTBOOT_BIN="$MOCK/fastboot" PATH="$MOCK:$PATH" bash "$COLLECTOR" "$OUT3" >/dev/null
 
 grep -q '^Classification: ADB_AUTHORIZATION_REQUIRED$' "$OUT3/INSPECTION_SUMMARY.txt"
 grep -q '^Target match: unknown$' "$OUT3/INSPECTION_SUMMARY.txt"
@@ -111,7 +129,7 @@ if grep -R -q 'SERIAL123' "$OUT3"; then
 fi
 
 OUT4="$TMP/adb-mixed"
-MOCK_ADB_STATE=mixed MOCK_FASTBOOT_STATE=disconnected PATH="$MOCK:$PATH" bash "$COLLECTOR" "$OUT4" >/dev/null
+MOCK_ADB_STATE=mixed MOCK_FASTBOOT_STATE=disconnected ADB_BIN="$MOCK/adb" FASTBOOT_BIN="$MOCK/fastboot" PATH="$MOCK:$PATH" bash "$COLLECTOR" "$OUT4" >/dev/null
 
 grep -q '^Classification: DEVICE_SELECTION_AMBIGUOUS_BLOCKED$' "$OUT4/INSPECTION_SUMMARY.txt"
 grep -q '^Target match: unknown$' "$OUT4/INSPECTION_SUMMARY.txt"
@@ -122,9 +140,23 @@ if grep -R -Eq 'SERIAL123|SERIAL456' "$OUT4"; then
   exit 1
 fi
 
+OUT5="$TMP/legacy-adb"
+MOCK_ADB_TOOL_VERSION=legacy MOCK_FASTBOOT_STATE=disconnected ADB_BIN="$MOCK/adb" FASTBOOT_BIN="$MOCK/fastboot" PATH="$MOCK:$PATH" bash "$COLLECTOR" "$OUT5" >/dev/null
+
+grep -q '^Classification: DEVICE_TOOLCHAIN_REQUIRED$' "$OUT5/INSPECTION_SUMMARY.txt"
+grep -q '^ADB protocol version: 1.0.31$' "$OUT5/INSPECTION_SUMMARY.txt"
+grep -q 'adb protocol is older than 1.0.41' "$OUT5/ovaltine-inspection-analysis.txt"
+
+OUT6="$TMP/legacy-fastboot"
+MOCK_FASTBOOT_TOOL_VERSION=legacy ADB_BIN="$MOCK/adb" FASTBOOT_BIN="$MOCK/fastboot" PATH="$MOCK:$PATH" bash "$COLLECTOR" "$OUT6" >/dev/null
+
+grep -q '^Classification: DEVICE_TOOLCHAIN_REQUIRED$' "$OUT6/INSPECTION_SUMMARY.txt"
+grep -q '^Fastboot version: 34.0.5$' "$OUT6/INSPECTION_SUMMARY.txt"
+
 if grep -REn '^[[:space:]]*(adb[[:space:]]+reboot|fastboot[[:space:]]+(boot|flash|erase|format|flashing|oem|set_active)|flashall)([[:space:]]|$)' \
   "$ROOT_DIR/scripts/collect-m1-device-inspection.sh" \
-  "$ROOT_DIR/scripts/inspect-ovaltine-device.sh"; then
+  "$ROOT_DIR/scripts/inspect-ovaltine-device.sh" \
+  "$ROOT_DIR/scripts/android-platform-tools.sh"; then
   echo 'ERROR: destructive or launch-shaped device command found in inspection tooling' >&2
   exit 1
 fi

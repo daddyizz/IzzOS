@@ -12,10 +12,15 @@ OUTPUT_DIR="$3"
 
 ADB_SUMMARY="$ADB_DIR/INSPECTION_SUMMARY.txt"
 ADB_ANALYSIS="$ADB_DIR/ovaltine-inspection-analysis.txt"
+ADB_RAW="$ADB_DIR/ovaltine-inspection.txt"
+ADB_CHECKSUMS="$ADB_DIR/SHA256SUMS"
 FASTBOOT_SUMMARY="$FASTBOOT_DIR/INSPECTION_SUMMARY.txt"
 FASTBOOT_ANALYSIS="$FASTBOOT_DIR/ovaltine-inspection-analysis.txt"
+FASTBOOT_RAW="$FASTBOOT_DIR/ovaltine-inspection.txt"
+FASTBOOT_CHECKSUMS="$FASTBOOT_DIR/SHA256SUMS"
 
-for f in "$ADB_SUMMARY" "$ADB_ANALYSIS" "$FASTBOOT_SUMMARY" "$FASTBOOT_ANALYSIS"; do
+for f in "$ADB_SUMMARY" "$ADB_ANALYSIS" "$ADB_RAW" "$ADB_CHECKSUMS" \
+         "$FASTBOOT_SUMMARY" "$FASTBOOT_ANALYSIS" "$FASTBOOT_RAW" "$FASTBOOT_CHECKSUMS"; do
   [[ -f "$f" ]] || { echo "ERROR: required inspection file missing: $f" >&2; exit 2; }
 done
 
@@ -35,6 +40,32 @@ placeholder() {
   [[ -z "$v" || "$v" == "unknown" || "$v" == "n/a" || "$v" == "na" || "$v" == "none" || "$v" == "unset" || "$v" == "unvalidated" || "$v" == "-" ]]
 }
 
+verify_bundle_checksums() {
+  local dir="$1" name count expected
+  local -a listed=()
+  local -a expected_files=(ovaltine-inspection.txt ovaltine-inspection-analysis.txt INSPECTION_SUMMARY.txt)
+
+  mapfile -t listed < <(awk '{name=$2; sub(/^\*/, "", name); print name}' "$dir/SHA256SUMS")
+  [[ "${#listed[@]}" -eq "${#expected_files[@]}" ]] || return 1
+
+  for name in "${listed[@]}"; do
+    case "$name" in
+      ovaltine-inspection.txt|ovaltine-inspection-analysis.txt|INSPECTION_SUMMARY.txt) ;;
+      *) return 1 ;;
+    esac
+  done
+
+  for expected in "${expected_files[@]}"; do
+    count=0
+    for name in "${listed[@]}"; do
+      [[ "$name" == "$expected" ]] && count=$((count + 1))
+    done
+    [[ "$count" -eq 1 ]] || return 1
+  done
+
+  (cd "$dir" && sha256sum -c SHA256SUMS >/dev/null 2>&1)
+}
+
 ADB_TARGET="$(value "$ADB_SUMMARY" 'Target match')"
 ADB_CLASS="$(value "$ADB_SUMMARY" 'Classification')"
 ADB_BUILD="$(value "$ADB_SUMMARY" 'Build ID')"
@@ -49,6 +80,15 @@ FB_USERSPACE="$(value "$FASTBOOT_SUMMARY" 'Userspace fastboot')"
 
 blocked=0
 reason=()
+
+if ! verify_bundle_checksums "$ADB_DIR"; then
+  reason+=("ADB evidence checksum manifest is invalid, incomplete or tampered")
+  blocked=1
+fi
+if ! verify_bundle_checksums "$FASTBOOT_DIR"; then
+  reason+=("fastboot evidence checksum manifest is invalid, incomplete or tampered")
+  blocked=1
+fi
 
 if [[ "$ADB_TARGET" != "yes" ]]; then
   reason+=("ADB capture does not positively match ovaltine")
@@ -128,6 +168,8 @@ Fastboot classification: $FB_CLASS
 Fastboot target observation: $FB_TARGET
 ADB evidence SHA256: $(sha256sum "$ADB_SUMMARY" | awk '{print $1}')
 Fastboot evidence SHA256: $(sha256sum "$FASTBOOT_SUMMARY" | awk '{print $1}')
+ADB checksum manifest SHA256: $(sha256sum "$ADB_CHECKSUMS" | awk '{print $1}')
+Fastboot checksum manifest SHA256: $(sha256sum "$FASTBOOT_CHECKSUMS" | awk '{print $1}')
 Collector mode: READ_ONLY
 Device writes: NONE
 Launch commands executed: NO

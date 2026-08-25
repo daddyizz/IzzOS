@@ -1,6 +1,6 @@
 # M1 Exact-Device Inspection Handoff
 
-Status: **prepared; do not execute until the project explicitly reaches the physical-device inspection gate**
+Status: **operational; attended exact-device capture and checksum-bound merge validated**
 
 Target: OnePlus 10T 5G (`ovaltine`) / Qualcomm SM8475.
 
@@ -16,6 +16,9 @@ Before running the inspection:
 - enable USB debugging only if needed for ADB inspection;
 - ensure only one target Android/fastboot device is connected to avoid ambiguous identity;
 - do not run broad `fastboot getvar all`.
+- use official Android SDK Platform-Tools 37.x or newer.
+
+The collector prefers configured SDK installations over `PATH`. For a deliberate tool selection, set `ADB_BIN` and `FASTBOOT_BIN` to the exact executables. Version numbers are recorded in the privacy-safe evidence, while local tool paths are not.
 
 ## Stage A — Android/ADB capture
 
@@ -74,6 +77,8 @@ Classification: M1_EXACT_DEVICE_EVIDENCE_CONSISTENT
 
 This classification means the supplied capture pair is internally consistent on the target/build/slot fields available to us. It does **not** prove physical identity by a hidden serial number and it does not authorize launch or packaging.
 
+The merger verifies each input bundle's `SHA256SUMS` before reading it as canonical evidence. The manifest must list exactly the raw inspection, analyzer output and summary once each; altered or path-shaped manifests fail closed.
+
 ## Evidence required before route work
 
 The combined captures must establish, or explicitly fail to establish:
@@ -107,7 +112,7 @@ The following remain hard stops for route-specific packaging:
 - `INSUFFICIENT_DATA`
 - `M1_EXACT_DEVICE_EVIDENCE_BLOCKED`
 
-The first four classifications are attendance states rather than device failures. They distinguish a missing host tool, disconnected phone, unapproved USB-debugging fingerprint and ambiguous multi-device connection. `NEED_EXACT_FASTBOOT_INSPECTION` means Android identity is available but a person at the phone must still enter classic bootloader-fastboot before the same read-only collector is rerun. None of these states authorizes `adb reboot`, `fastboot boot`, flashing, unlocking or slot changes.
+The first four classifications are attendance states rather than device failures. They distinguish a missing or obsolete host tool, disconnected phone, unapproved USB-debugging fingerprint and ambiguous multi-device connection. `NEED_EXACT_FASTBOOT_INSPECTION` means Android identity is available but a person at the phone must still enter classic bootloader-fastboot before the same read-only collector is rerun. None of these states authorizes `adb reboot`, `fastboot boot`, flashing, unlocking or slot changes.
 
 ## Privacy
 

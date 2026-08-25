@@ -186,6 +186,17 @@ product: CPH2415
 [FASTBOOT] fastboot not installed; skipping bootloader-side inspection.
 EOF
 
+cat > "${TMP_DIR}/legacy-platform-tools.txt" <<'EOF'
+[HOST] selected Android Platform-Tools versions
+adb-protocol-version: 1.0.31
+adb-platform-tools-version: unknown
+fastboot-version: 37.0.0
+[ADB] authorized devices: 0
+[ADB] unauthorized/offline/other entries: 1
+[ADB] no authorized Android device detected.
+[FASTBOOT] connected devices: 0
+EOF
+
 assert_classification "classic fastboot candidate" "CLASSIC_FASTBOOT_CANDIDATE_UNVERIFIED" "${TMP_DIR}/candidate.txt"
 CANDIDATE_OUTPUT="$(bash "${ANALYZER}" "${TMP_DIR}/candidate.txt")"
 grep -Fq 'DTB index: 1' <<<"${CANDIDATE_OUTPUT}"
@@ -208,5 +219,8 @@ assert_classification "disconnected device requires connection" "DEVICE_CONNECTI
 assert_classification "multiple devices are ambiguous" "DEVICE_SELECTION_AMBIGUOUS_BLOCKED" "${TMP_DIR}/multiple-adb.txt"
 assert_classification "mixed authorized and unauthorized devices are ambiguous" "DEVICE_SELECTION_AMBIGUOUS_BLOCKED" "${TMP_DIR}/mixed-adb.txt"
 assert_classification "missing fastboot tool blocks attendance handoff" "DEVICE_TOOLCHAIN_REQUIRED" "${TMP_DIR}/missing-fastboot-tool.txt"
+assert_classification "legacy ADB is rejected before authorization advice" "DEVICE_TOOLCHAIN_REQUIRED" "${TMP_DIR}/legacy-platform-tools.txt"
+LEGACY_OUTPUT="$(bash "${ANALYZER}" "${TMP_DIR}/legacy-platform-tools.txt")"
+grep -Fq 'adb protocol is older than 1.0.41' <<<"${LEGACY_OUTPUT}"
 
 echo "All Ovaltine inspection analyzer tests passed."
