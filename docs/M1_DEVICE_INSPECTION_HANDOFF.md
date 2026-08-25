@@ -95,6 +95,10 @@ Every collector bundle and the merged canonical evidence include SHA256 checksum
 
 The following remain hard stops for route-specific packaging:
 
+- `DEVICE_TOOLCHAIN_REQUIRED`
+- `DEVICE_CONNECTION_REQUIRED`
+- `ADB_AUTHORIZATION_REQUIRED`
+- `DEVICE_SELECTION_AMBIGUOUS_BLOCKED`
 - `TARGET_MISMATCH_BLOCKED`
 - `FASTBOOTD_DETECTED_BLOCKED`
 - `LOCKED_BOOTLOADER_BLOCKED`
@@ -102,6 +106,8 @@ The following remain hard stops for route-specific packaging:
 - `NEED_EXACT_FASTBOOT_INSPECTION`
 - `INSUFFICIENT_DATA`
 - `M1_EXACT_DEVICE_EVIDENCE_BLOCKED`
+
+The first four classifications are attendance states rather than device failures. They distinguish a missing host tool, disconnected phone, unapproved USB-debugging fingerprint and ambiguous multi-device connection. `NEED_EXACT_FASTBOOT_INSPECTION` means Android identity is available but a person at the phone must still enter classic bootloader-fastboot before the same read-only collector is rerun. None of these states authorizes `adb reboot`, `fastboot boot`, flashing, unlocking or slot changes.
 
 ## Privacy
 

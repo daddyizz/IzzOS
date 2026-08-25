@@ -12,7 +12,14 @@ cat > "$MOCK/adb" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 if [[ "${1:-}" == "devices" ]]; then
-  printf 'List of devices attached\nSERIAL123\tdevice\n'
+  case "${MOCK_ADB_STATE:-authorized}" in
+    authorized) printf 'List of devices attached\nSERIAL123\tdevice\n' ;;
+    unauthorized) printf 'List of devices attached\nSERIAL123\tunauthorized\n' ;;
+    disconnected) printf 'List of devices attached\n' ;;
+    multiple) printf 'List of devices attached\nSERIAL123\tdevice\nSERIAL456\tdevice\n' ;;
+    mixed) printf 'List of devices attached\nSERIAL123\tdevice\nSERIAL456\tunauthorized\n' ;;
+    *) exit 1 ;;
+  esac
   exit 0
 fi
 if [[ "${1:-}" == "shell" && "${2:-}" == "getprop" ]]; then
@@ -38,7 +45,12 @@ cat > "$MOCK/fastboot" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 if [[ "${1:-}" == "devices" ]]; then
-  printf 'SERIAL123\tfastboot\n'
+  case "${MOCK_FASTBOOT_STATE:-connected}" in
+    connected) printf 'SERIAL123\tfastboot\n' ;;
+    disconnected) : ;;
+    multiple) printf 'SERIAL123\tfastboot\nSERIAL456\tfastboot\n' ;;
+    *) exit 1 ;;
+  esac
   exit 0
 fi
 if [[ "${1:-}" == "getvar" ]]; then
@@ -73,14 +85,42 @@ grep -q '^dtb-index: 1$' "$OUT1/ovaltine-inspection.txt"
 grep -q '^Device writes: NONE$' "$OUT1/INSPECTION_SUMMARY.txt"
 grep -q '^Launch commands executed: NO$' "$OUT1/INSPECTION_SUMMARY.txt"
 (cd "$OUT1" && sha256sum -c SHA256SUMS >/dev/null)
+if grep -R -q 'SERIAL123' "$OUT1"; then
+  echo 'ERROR: collector leaked a device serial number' >&2
+  exit 1
+fi
 
-rm -f "$MOCK/fastboot"
 OUT2="$TMP/adb-only"
-PATH="$MOCK:$PATH" bash "$COLLECTOR" "$OUT2" >/dev/null
+MOCK_FASTBOOT_STATE=disconnected PATH="$MOCK:$PATH" bash "$COLLECTOR" "$OUT2" >/dev/null
 
 grep -q '^Classification: NEED_EXACT_FASTBOOT_INSPECTION$' "$OUT2/INSPECTION_SUMMARY.txt"
 grep -q '^Target match: yes$' "$OUT2/INSPECTION_SUMMARY.txt"
 (cd "$OUT2" && sha256sum -c SHA256SUMS >/dev/null)
+
+OUT3="$TMP/adb-unauthorized"
+MOCK_ADB_STATE=unauthorized MOCK_FASTBOOT_STATE=disconnected PATH="$MOCK:$PATH" bash "$COLLECTOR" "$OUT3" >/dev/null
+
+grep -q '^Classification: ADB_AUTHORIZATION_REQUIRED$' "$OUT3/INSPECTION_SUMMARY.txt"
+grep -q '^Target match: unknown$' "$OUT3/INSPECTION_SUMMARY.txt"
+grep -q '^Unauthorized/offline/other ADB entries: 1$' "$OUT3/ovaltine-inspection-analysis.txt"
+grep -q '^Device writes: NONE$' "$OUT3/INSPECTION_SUMMARY.txt"
+(cd "$OUT3" && sha256sum -c SHA256SUMS >/dev/null)
+if grep -R -q 'SERIAL123' "$OUT3"; then
+  echo 'ERROR: unauthorized-device collector output leaked a serial number' >&2
+  exit 1
+fi
+
+OUT4="$TMP/adb-mixed"
+MOCK_ADB_STATE=mixed MOCK_FASTBOOT_STATE=disconnected PATH="$MOCK:$PATH" bash "$COLLECTOR" "$OUT4" >/dev/null
+
+grep -q '^Classification: DEVICE_SELECTION_AMBIGUOUS_BLOCKED$' "$OUT4/INSPECTION_SUMMARY.txt"
+grep -q '^Target match: unknown$' "$OUT4/INSPECTION_SUMMARY.txt"
+grep -q '^Model: unknown$' "$OUT4/ovaltine-inspection-analysis.txt"
+(cd "$OUT4" && sha256sum -c SHA256SUMS >/dev/null)
+if grep -R -Eq 'SERIAL123|SERIAL456' "$OUT4"; then
+  echo 'ERROR: mixed-device collector output leaked a serial number' >&2
+  exit 1
+fi
 
 if grep -REn '^[[:space:]]*(adb[[:space:]]+reboot|fastboot[[:space:]]+(boot|flash|erase|format|flashing|oem|set_active)|flashall)([[:space:]]|$)' \
   "$ROOT_DIR/scripts/collect-m1-device-inspection.sh" \

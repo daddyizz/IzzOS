@@ -59,6 +59,7 @@ VB_STATE="$(adb_value verified-boot-state || true)"
 VBMETA_STATE="$(adb_value vbmeta-device-state || true)"
 
 ADB_COUNT="$(awk -F': ' '/^\[ADB\] authorized devices:/ {print $2; exit}' "${INPUT}" | trim)"
+ADB_OTHER_COUNT="$(awk -F': ' '/^\[ADB\] unauthorized\/offline\/other entries:/ {print $2; exit}' "${INPUT}" | trim)"
 FASTBOOT_COUNT="$(awk -F': ' '/^\[FASTBOOT\] connected devices:/ {print $2; exit}' "${INPUT}" | trim)"
 
 FB_PRODUCT="$(fastboot_value product || true)"
@@ -96,24 +97,39 @@ fi
 CLASSIFICATION="INSUFFICIENT_DATA"
 NEXT_GATE="Collect one authorized ADB inspection and one exact-device bootloader inspection."
 
-if [[ "${TARGET_MATCH}" == "no" ]]; then
+if [[ "${ADB_COUNT:-}" =~ ^[0-9]+$ && "${ADB_OTHER_COUNT:-0}" =~ ^[0-9]+$ && $((ADB_COUNT + ADB_OTHER_COUNT)) -gt 1 ]] ||
+   [[ "${FASTBOOT_COUNT:-}" =~ ^[0-9]+$ && "${FASTBOOT_COUNT}" -gt 1 ]]; then
+  CLASSIFICATION="DEVICE_SELECTION_AMBIGUOUS_BLOCKED"
+  NEXT_GATE="Disconnect every unrelated device and repeat the privacy-safe inspection with exactly one target in one transport mode."
+elif [[ "${TARGET_MATCH}" == "no" ]]; then
   CLASSIFICATION="TARGET_MISMATCH_BLOCKED"
   NEXT_GATE="Stop M1 launch preparation until the exact OnePlus 10T / ovaltine target is confirmed."
-elif [[ "${FASTBOOT_COUNT:-0}" != "1" ]]; then
+elif [[ "${FASTBOOT_COUNT:-}" == "1" ]]; then
+  if [[ "${USERSPACE_LC}" == "yes" || "${USERSPACE_LC}" == "true" || "${USERSPACE_LC}" == "1" ]]; then
+    CLASSIFICATION="FASTBOOTD_DETECTED_BLOCKED"
+    NEXT_GATE="Fastbootd is userspace fastboot. Collect classic bootloader-fastboot capability data before choosing a temporary UEFI route."
+  elif [[ "${UNLOCKED_LC}" == "no" || "${UNLOCKED_LC}" == "false" || "${UNLOCKED_LC}" == "0" ]]; then
+    CLASSIFICATION="LOCKED_BOOTLOADER_BLOCKED"
+    NEXT_GATE="Do not package or launch unsigned temporary boot payloads. Seek a non-destructive OEM/loader path or make a separate, explicit unlock-risk decision later."
+  elif [[ "${UNLOCKED_LC}" == "yes" || "${UNLOCKED_LC}" == "true" || "${UNLOCKED_LC}" == "1" ]]; then
+    CLASSIFICATION="CLASSIC_FASTBOOT_CANDIDATE_UNVERIFIED"
+    NEXT_GATE="Classic fastboot is a candidate only. Verify exact-firmware support for temporary boot/chain-load before creating any launch image."
+  else
+    CLASSIFICATION="BOOTLOADER_STATE_UNKNOWN_BLOCKED"
+    NEXT_GATE="Resolve the bootloader unlock state and confirm classic fastboot before launch preparation."
+  fi
+elif [[ "${ADB_COUNT:-}" == "0" && "${ADB_OTHER_COUNT:-0}" =~ ^[0-9]+$ && "${ADB_OTHER_COUNT:-0}" -gt 0 ]]; then
+  CLASSIFICATION="ADB_AUTHORIZATION_REQUIRED"
+  NEXT_GATE="A person at the phone must unlock Android, accept the USB-debugging fingerprint for this host, keep the cable connected and rerun the read-only inspection."
+elif [[ "${ADB_COUNT:-}" == "0" && "${FASTBOOT_COUNT:-}" == "0" ]]; then
+  CLASSIFICATION="DEVICE_CONNECTION_REQUIRED"
+  NEXT_GATE="Connect exactly one target phone by USB in Android or classic bootloader-fastboot mode, then rerun the read-only inspection."
+elif [[ ! "${ADB_COUNT:-}" =~ ^[0-9]+$ || ! "${FASTBOOT_COUNT:-}" =~ ^[0-9]+$ ]]; then
+  CLASSIFICATION="DEVICE_TOOLCHAIN_REQUIRED"
+  NEXT_GATE="Install both adb and fastboot on the host, then repeat the privacy-safe presence and capability inspection."
+elif [[ "${ADB_COUNT}" == "1" && "${FASTBOOT_COUNT}" == "0" ]]; then
   CLASSIFICATION="NEED_EXACT_FASTBOOT_INSPECTION"
-  NEXT_GATE="Collect the privacy-safe inspector output with exactly one device in bootloader/fastboot mode."
-elif [[ "${USERSPACE_LC}" == "yes" || "${USERSPACE_LC}" == "true" || "${USERSPACE_LC}" == "1" ]]; then
-  CLASSIFICATION="FASTBOOTD_DETECTED_BLOCKED"
-  NEXT_GATE="Fastbootd is userspace fastboot. Collect classic bootloader-fastboot capability data before choosing a temporary UEFI route."
-elif [[ "${UNLOCKED_LC}" == "no" || "${UNLOCKED_LC}" == "false" || "${UNLOCKED_LC}" == "0" ]]; then
-  CLASSIFICATION="LOCKED_BOOTLOADER_BLOCKED"
-  NEXT_GATE="Do not package or launch unsigned temporary boot payloads. Seek a non-destructive OEM/loader path or make a separate, explicit unlock-risk decision later."
-elif [[ "${UNLOCKED_LC}" == "yes" || "${UNLOCKED_LC}" == "true" || "${UNLOCKED_LC}" == "1" ]]; then
-  CLASSIFICATION="CLASSIC_FASTBOOT_CANDIDATE_UNVERIFIED"
-  NEXT_GATE="Classic fastboot is a candidate only. Verify exact-firmware support for temporary boot/chain-load before creating any launch image."
-else
-  CLASSIFICATION="BOOTLOADER_STATE_UNKNOWN_BLOCKED"
-  NEXT_GATE="Resolve the bootloader unlock state and confirm classic fastboot before launch preparation."
+  NEXT_GATE="A person at the phone must enter classic bootloader-fastboot without changing slots or flashing, then rerun the privacy-safe inspection."
 fi
 
 cat <<EOF
@@ -125,6 +141,7 @@ Classification: ${CLASSIFICATION}
 Observed Android-side data
 --------------------------
 Authorized ADB devices: ${ADB_COUNT:-unknown}
+Unauthorized/offline/other ADB entries: ${ADB_OTHER_COUNT:-0}
 Model: ${MODEL:-unknown}
 Device: ${DEVICE:-unknown}
 Product: ${PRODUCT_ADB:-unknown}

@@ -10,6 +10,7 @@ on:
       - 'docs/M1_CURRENT_PAYLOAD.txt'
       - 'docs/M1_STANDALONE_FIRMWARE_BRINGUP.md'
       - 'docs/M7_STANDALONE_LAYOUT_CONTRACT.md'
+      - 'docs/M8_DEVICE_ATTENDANCE_HANDOFF.md'
       - '.github/workflows/uefi-ovaltine-diag.yml'
   pull_request:
     paths:
@@ -18,6 +19,7 @@ on:
       - 'docs/M1_CURRENT_PAYLOAD.txt'
       - 'docs/M1_STANDALONE_FIRMWARE_BRINGUP.md'
       - 'docs/M7_STANDALONE_LAYOUT_CONTRACT.md'
+      - 'docs/M8_DEVICE_ATTENDANCE_HANDOFF.md'
       - '.github/workflows/uefi-ovaltine-diag.yml'
 
 jobs:
@@ -33,7 +35,7 @@ jobs:
       - name: Validate shell scripts
         run: bash -n scripts/*.sh
 
-      - name: Test device capability analyzer
+      - name: Test privacy-safe device attendance and capability analyzer
         run: bash scripts/test-analyze-ovaltine-inspection.sh
 
       - name: Test one-command read-only device inspection collector

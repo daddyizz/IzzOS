@@ -19,7 +19,7 @@ if have adb; then
   fi
   echo
 
-  if [[ "${ADB_AUTH_COUNT}" -eq 1 ]]; then
+  if [[ "${ADB_AUTH_COUNT}" -eq 1 && "${ADB_OTHER_COUNT}" -eq 0 ]]; then
     echo "[ADB] device identity / firmware"
     printf 'model: '; adb shell getprop ro.product.model | tr -d '\r'
     printf 'device: '; adb shell getprop ro.product.device | tr -d '\r'
@@ -32,8 +32,8 @@ if have adb; then
     printf 'verified-boot-state: '; adb shell getprop ro.boot.verifiedbootstate | tr -d '\r'
     printf 'vbmeta-device-state: '; adb shell getprop ro.boot.vbmeta.device_state | tr -d '\r'
     echo
-  elif [[ "${ADB_AUTH_COUNT}" -gt 1 ]]; then
-    echo "[ADB] multiple authorized devices detected; identity queries skipped to avoid targeting ambiguity."
+  elif [[ $((ADB_AUTH_COUNT + ADB_OTHER_COUNT)) -gt 1 ]]; then
+    echo "[ADB] multiple device entries detected; identity queries skipped to avoid targeting ambiguity."
     echo
   else
     echo "[ADB] no authorized Android device detected."

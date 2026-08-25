@@ -152,6 +152,40 @@ product: CPH2415
 [FASTBOOT] connected devices: 0
 EOF
 
+cat > "${TMP_DIR}/adb-unauthorized.txt" <<'EOF'
+[ADB] authorized devices: 0
+[ADB] unauthorized/offline/other entries: 1
+[ADB] no authorized Android device detected.
+[FASTBOOT] connected devices: 0
+EOF
+
+cat > "${TMP_DIR}/disconnected.txt" <<'EOF'
+[ADB] authorized devices: 0
+[ADB] no authorized Android device detected.
+[FASTBOOT] connected devices: 0
+EOF
+
+cat > "${TMP_DIR}/multiple-adb.txt" <<'EOF'
+[ADB] authorized devices: 2
+[ADB] multiple authorized devices detected; identity queries skipped to avoid targeting ambiguity.
+[FASTBOOT] connected devices: 0
+EOF
+
+cat > "${TMP_DIR}/mixed-adb.txt" <<'EOF'
+[ADB] authorized devices: 1
+[ADB] unauthorized/offline/other entries: 1
+[ADB] multiple device entries detected; identity queries skipped to avoid targeting ambiguity.
+[FASTBOOT] connected devices: 0
+EOF
+
+cat > "${TMP_DIR}/missing-fastboot-tool.txt" <<'EOF'
+[ADB] authorized devices: 1
+model: OnePlus 10T 5G
+device: ovaltine
+product: CPH2415
+[FASTBOOT] fastboot not installed; skipping bootloader-side inspection.
+EOF
+
 assert_classification "classic fastboot candidate" "CLASSIC_FASTBOOT_CANDIDATE_UNVERIFIED" "${TMP_DIR}/candidate.txt"
 CANDIDATE_OUTPUT="$(bash "${ANALYZER}" "${TMP_DIR}/candidate.txt")"
 grep -Fq 'DTB index: 1' <<<"${CANDIDATE_OUTPUT}"
@@ -166,5 +200,13 @@ assert_classification "fastbootd blocked" "FASTBOOTD_DETECTED_BLOCKED" "${TMP_DI
 assert_classification "locked bootloader blocked" "LOCKED_BOOTLOADER_BLOCKED" "${TMP_DIR}/locked.txt"
 assert_classification "target mismatch blocked" "TARGET_MISMATCH_BLOCKED" "${TMP_DIR}/mismatch.txt"
 assert_classification "ADB-only needs fastboot" "NEED_EXACT_FASTBOOT_INSPECTION" "${TMP_DIR}/adb-only.txt"
+assert_classification "unauthorized ADB requires local approval" "ADB_AUTHORIZATION_REQUIRED" "${TMP_DIR}/adb-unauthorized.txt"
+UNAUTHORIZED_OUTPUT="$(bash "${ANALYZER}" "${TMP_DIR}/adb-unauthorized.txt")"
+grep -Fq 'Unauthorized/offline/other ADB entries: 1' <<<"${UNAUTHORIZED_OUTPUT}"
+grep -Fq 'A person at the phone must unlock Android' <<<"${UNAUTHORIZED_OUTPUT}"
+assert_classification "disconnected device requires connection" "DEVICE_CONNECTION_REQUIRED" "${TMP_DIR}/disconnected.txt"
+assert_classification "multiple devices are ambiguous" "DEVICE_SELECTION_AMBIGUOUS_BLOCKED" "${TMP_DIR}/multiple-adb.txt"
+assert_classification "mixed authorized and unauthorized devices are ambiguous" "DEVICE_SELECTION_AMBIGUOUS_BLOCKED" "${TMP_DIR}/mixed-adb.txt"
+assert_classification "missing fastboot tool blocks attendance handoff" "DEVICE_TOOLCHAIN_REQUIRED" "${TMP_DIR}/missing-fastboot-tool.txt"
 
 echo "All Ovaltine inspection analyzer tests passed."
