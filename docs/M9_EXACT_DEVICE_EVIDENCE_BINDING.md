@@ -18,6 +18,8 @@ The attended CPH2413 revalidation established:
 
 Privacy-safe runtime evidence remains under the local ignored `out/` tree and is not committed.
 
+The exact Android identity is not rewritten to the development codename. On this CPH2413 build, Android reports `device` and `vendor-device` as `OP5552L1`, `product` as `CPH2413`, and classic fastboot reports `taro`. Downstream M2 evidence-bundle verification accepts that complete build-bound tuple as well as the legacy `ovaltine` development identity, while rejecting partial or inconsistent aliases.
+
 ## Deterministic Platform-Tools selection
 
 Inspection tooling resolves `adb` and `fastboot` in this order:

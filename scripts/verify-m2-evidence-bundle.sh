@@ -30,6 +30,7 @@ manifest_value() {
 
 DEVICE="$(inspection_value device || true)"
 PRODUCT="$(inspection_value product || true)"
+VENDOR_DEVICE="$(inspection_value vendor-device || true)"
 BUILD_ID="$(inspection_value build-id || true)"
 STAGE_TARGET="$(manifest_value "$STAGING" Target || true)"
 STAGE_FIRMWARE="$(manifest_value "$STAGING" 'Firmware ID' || true)"
@@ -40,8 +41,19 @@ STAGE_SLOT_CHANGES="$(manifest_value "$STAGING" 'Slot changes' || true)"
 
 blocked=0
 
-if [[ "${DEVICE,,}" != "ovaltine" ]]; then
-  echo "ERROR: inspection device is not ovaltine: ${DEVICE:-UNKNOWN}" >&2
+identity_ok=0
+if [[ "${DEVICE,,}" == "ovaltine" ]]; then
+  identity_ok=1
+elif [[ "$DEVICE" == "OP5552L1" && "$PRODUCT" == "CPH2413" && \
+        "$VENDOR_DEVICE" == "OP5552L1" && "$BUILD_ID" == CPH2413_* ]]; then
+  # The exact CPH2413 OxygenOS 15 target reports the commercial internal
+  # identity OP5552L1 on Android and taro in classic fastboot.  This tuple is
+  # bound by M9 exact-device evidence and must not be rewritten to ovaltine.
+  identity_ok=1
+fi
+
+if [[ "$identity_ok" -ne 1 ]]; then
+  echo "ERROR: inspection identity is not an accepted OnePlus 10T tuple: device=${DEVICE:-UNKNOWN} product=${PRODUCT:-UNKNOWN} vendor-device=${VENDOR_DEVICE:-UNKNOWN}" >&2
   blocked=1
 fi
 
@@ -61,7 +73,8 @@ if [[ -z "$STAGE_ROUTE" ]]; then
   echo "ERROR: staging launch route is missing" >&2
   blocked=1
 elif [[ "$STAGE_ROUTE" == "NONE" ]]; then
-  if [[ -n "$STAGE_DECISION" && "$STAGE_DECISION" != "INSUFFICIENT_DEVICE_DATA" ]]; then
+  if [[ -n "$STAGE_DECISION" && "$STAGE_DECISION" != "INSUFFICIENT_DEVICE_DATA" && \
+        "$STAGE_DECISION" != "CLASSIC_FASTBOOT_CANDIDATE_UNVERIFIED" ]]; then
     echo "ERROR: route NONE is inconsistent with route decision: $STAGE_DECISION" >&2
     blocked=1
   fi
