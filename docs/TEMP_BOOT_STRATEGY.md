@@ -45,7 +45,7 @@ Before a route can be marked validated, IzzOS must have route-specific evidence 
 
 The physical route record must also pass `verify-m2-route-evidence.sh`. A manifest that merely names a missing evidence path, or artifacts whose current bytes no longer match their recorded size/SHA256, cannot advance to route-specific packaging.
 
-A detached signature can be checked with `verify-m2-route-attestation.py`, but the M12 signature-pass classification remains non-authorizing until the independent attester key has reviewed custody, revocation and rotation governance. A valid signature proves key endorsement of bytes, not physical truth by itself.
+A detached signature can be checked with `verify-m2-route-attestation.py`. Internal M13 can additionally validate root-signed custody, rotation and revocation records with `verify-m2-route-attester-governance.py`, but its root is still caller supplied rather than repository enrolled. Both success classifications remain non-authorizing: signatures prove key endorsement of bytes, not physical truth by themselves.
 
 ## Packaging requirement
 

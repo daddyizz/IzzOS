@@ -43,7 +43,7 @@ route-specific-packaging-authorization: NO
 payload-launch-authorization: NO
 ```
 
-Therefore M12 is not added as a passing M2-readiness authorization gate. A later internal milestone must establish the trust-anchor governance required before a signed route endorsement can contribute to route-specific packaging readiness.
+Therefore M12 is not added as a passing M2-readiness authorization gate. Internal M13 now validates the host-side governance-policy and revocation-registry mechanics, but its governance root remains caller supplied rather than repository enrolled. A future enrollment step with independently controlled custody is still required before a signed route endorsement can contribute to route-specific packaging readiness.
 
 ## Completion boundary
 
@@ -58,4 +58,3 @@ Internal M12 is complete when:
 7. the complete host suite and CI pass without device interaction.
 
 Product M1 remains blocked on exact local stock acceptance, genuine physical route evidence, an independently controlled attester key and reviewed key-governance policy.
-

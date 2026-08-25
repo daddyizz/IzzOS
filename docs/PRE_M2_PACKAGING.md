@@ -85,6 +85,21 @@ python3 scripts/verify-m2-route-attestation.py \
 
 The current success classification, `M2_ROUTE_ATTESTATION_SIGNATURE_PASS_KEY_GOVERNANCE_REQUIRED`, is deliberately non-authorizing. Until the pinned attester key has independently reviewed custody, revocation and rotation governance, the report must continue to state `route-specific-packaging-authorization: NO` and `payload-launch-authorization: NO`.
 
+## Route-attester governance boundary
+
+Internal M13 adds canonical, governance-root-signed policy and revocation-registry records. The verifier binds both records to the exact M12 report, active attester key manifest and public key; checks epochs, sequences, validity windows, custody separation, scheduled rotation and emergency revocation policy; and rejects changed or stale records.
+
+```bash
+python3 scripts/verify-m2-route-attester-governance.py \
+  route-attestation-report.txt trusted-key-manifest.txt authority-public-key.pem \
+  governance-root-manifest.txt governance-root-public-key.pem \
+  governance-policy.txt policy-signature.bin \
+  revocation-registry.txt registry-signature.bin \
+  2026-08-25T00:00:00Z route-governance-report.txt
+```
+
+Its success classification, `M2_ROUTE_ATTESTER_GOVERNANCE_SIGNATURE_PASS_ROOT_ENROLLMENT_REQUIRED`, remains non-authorizing because the root is caller pinned and not enrolled by the repository. It does not establish independent custody, authenticate a physical observation or permit route-specific packaging or launch.
+
 ## Packaging invariants
 
 Any future M2 package must:
