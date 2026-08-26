@@ -106,7 +106,7 @@ The core OS experience should stay lightweight and free from desktop, lock-scree
 
 **Project stage:** Early platform bring-up  
 **Current milestone:** M1 — Non-Destructive UEFI Diagnostic Payload  
-**Internal engineering checkpoint:** M16 host-test checkpoint predecessor binding and alternate-head rejection implemented; product M1 now awaits production independent custody and genuine exact-device stock/temporary-execution evidence<br>
+**Internal engineering checkpoint:** M16 host-test checkpoint predecessor binding and alternate-head rejection implemented; exact-stock `fastboot boot` runtime route confirmed on CPH2413, while product M1 still requires a verified custom container, diagnostic execution evidence and independent custody<br>
 **Reference target:** OnePlus 10T 5G / `ovaltine` / SM8475
 
 This project is experimental. Do not flash or repartition a device based on incomplete bring-up work.

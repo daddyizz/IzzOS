@@ -103,6 +103,9 @@ jobs:
       - name: Test exact-stock LinuxLoader fastboot/boot string analyzer
         run: bash scripts/test-analyze-linuxloader-fastboot-strings.sh
 
+      - name: Test exact-stock fastboot boot route evidence verifier
+        run: bash scripts/test-verify-m1-stock-fastboot-boot-route.sh
+
       - name: Test M6 exact stock kernel-region geometry verifier
         run: bash scripts/test-verify-m1-kernel-region-geometry.sh
 

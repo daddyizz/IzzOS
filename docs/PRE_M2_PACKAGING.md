@@ -1,6 +1,6 @@
 # Pre-M2 Temporary Launch Packaging Contract
 
-Status: **host-side preparation only / no device route selected**
+Status: **exact-stock temporary route observed / custom container not selected**
 
 This document defines what an IzzOS temporary launch package must guarantee before M2 can begin on the exact OnePlus 10T 5G test device.
 
@@ -8,7 +8,7 @@ This document defines what an IzzOS temporary launch package must guarantee befo
 
 `OvaltineDiag.efi` is a verified ARM64 UEFI application, but it is not by itself an Android boot image and must not be flashed directly to any phone partition.
 
-The packaging layer is deliberately route-neutral until exact-device inspection proves which temporary launch mechanism exists on the target firmware.
+The exact device has accepted its content-bound stock `boot.img` through classic `fastboot boot` and returned to the same build and slot. The packaging layer must still remain custom-container-neutral until a standalone firmware entry design and exact Android boot v4 wrapper are independently verified. See `docs/M1_EXACT_STOCK_FASTBOOT_BOOT_ROUTE.md`.
 
 ## Required inputs before route-specific packaging
 

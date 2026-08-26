@@ -39,7 +39,9 @@ No command that writes a partition belongs in this validation step.
 
 ## Temporary-boot capability interpretation
 
-Seeing classic fastboot and an unlocked bootloader is only a **candidate state**. It does not prove that a specific firmware safely supports temporary `fastboot boot` for the package we intend to use.
+Seeing classic fastboot and an unlocked bootloader is initially only a **candidate state**. It does not prove that a specific firmware safely supports temporary `fastboot boot` for the package we intend to use.
+
+The exact CPH2413 OxygenOS `15.0.0.1901(EX01)` device has since accepted its content-bound exact stock `boot.img` through one owner-risk-accepted non-persistent `fastboot boot` probe and returned to the same Android build and slot. `verify-m1-stock-fastboot-boot-route.py` binds that private observation to the stock bytes, provenance, hash lock and pre/post captures. This confirms the exact stock route handler at runtime, but does not validate a custom container or diagnostic payload.
 
 Before a route can be marked validated, IzzOS must have route-specific evidence for the exact firmware and a recovery plan. The analyzer therefore reports conservative states such as `CLASSIC_FASTBOOT_CANDIDATE_UNVERIFIED` instead of treating an unlocked device as approval to launch.
 
@@ -57,9 +59,9 @@ Internal M15 validates host-test root-recovery continuity and an anti-rollback c
 
 The package must be derived from the exact stock boot/vendor_boot format rather than guessed from an older Snapdragon target. See `docs/PRE_M2_PACKAGING.md` for the route-neutral packaging contract.
 
-Exact-stock ABL/LinuxLoader static analysis may enumerate `fastboot`, boot-image and command-related strings with `analyze-linuxloader-fastboot-strings.py`. This narrows reverse-engineering targets but is deliberately non-authorizing: a string does not prove that its handler is reachable on the exact bootloader, that `fastboot boot` is accepted, or that an arbitrary wrapper will return safely to stock.
+Exact-stock ABL/LinuxLoader static analysis may enumerate `fastboot`, boot-image and command-related strings with `analyze-linuxloader-fastboot-strings.py`. This narrowed the reverse-engineering target before the exact-stock runtime probe. The runtime result now proves that the handler is reachable and accepts the exact stock image; neither static strings nor the stock probe prove that an arbitrary wrapper will return safely to stock.
 
-The AOSP fastboot protocol defines `boot` as booting previously downloaded data as a normal `boot.img`: https://android.googlesource.com/platform/system/core/+/refs/tags/android-cts-7.0_r33/fastboot/fastboot_protocol.txt. The exact CPH2413 LinuxLoader contains a `boot` command token and an unlocked-state diagnostic for that command. Protocol semantics plus static handler evidence strengthen the candidate classification only; they do not replace an exact-device runtime observation or the recovery gate.
+The AOSP fastboot protocol defines `boot` as booting previously downloaded data as a normal `boot.img`: https://android.googlesource.com/platform/system/core/+/refs/tags/android-cts-7.0_r33/fastboot/fastboot_protocol.txt. The exact CPH2413 LinuxLoader contains a `boot` command token and an unlocked-state diagnostic for that command. Protocol semantics, static handler evidence and the exact-stock runtime observation now agree. The custom-container and recovery gates remain separate.
 
 ## Exit condition
 
