@@ -1,0 +1,17 @@
+route-governance-root-enrollment-schema: IZZOS_M2_ROUTE_GOVERNANCE_ROOT_ENROLLMENT_V1
+enrollment-id: izzos-m2-route-governance-host-test-01
+governance-root-key-id: izzos-m2-route-governance-host-test-01
+governance-root-public-key-path: config/m2-route-governance-root-test-public.pem
+governance-root-public-key-sha256: a9c36c853abf38cf15660d584e68e26058f3dd18835bfb7b0632ac6ff94bbcef
+enrollment-environment: HOST_TEST_ONLY_NOT_PRODUCTION
+repository-review-policy: TWO_PERSON_REVIEW_REQUIRED_FOR_PRODUCTION_REPLACEMENT
+root-custody-policy: OFFLINE_EXTERNAL_TO_REPOSITORY_ATTESTER_AND_LAUNCH_OPERATOR
+scheduled-rotation-policy: DUAL_CONTROL_CURRENT_AND_REPLACEMENT_ROOT_REQUIRED
+emergency-recovery-policy: EXTERNAL_2_OF_3_CUSTODIAN_QUORUM_REQUIRED
+effective-from-utc: 2026-01-01T00:00:00Z
+valid-until-utc: 2027-01-01T00:00:00Z
+governance-scope: M2_ROUTE_ATTESTER_KEY_GOVERNANCE_ONLY
+persistent-writes: FORBIDDEN
+slot-changes: FORBIDDEN
+route-specific-packaging-authorization: NO
+payload-launch-authorization: NO

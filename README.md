@@ -71,6 +71,8 @@ The first successful on-device goal is a temporary diagnostic launch that proves
 16. **M15 — Release Candidate**
 17. **M16 — IzzOS 1.0 Final**
 
+M8 is a separable GPU track and may be paused after M7 while M9A validates non-GPU Windows compatibility. GPU-dependent M9B, hardware-accelerated workloads, M12 gaming validation and the corresponding final-release claims remain blocked until M8 is resumed and passes.
+
 ## Safety Rules
 
 Until the relevant platform stages are validated:
@@ -104,6 +106,7 @@ The core OS experience should stay lightweight and free from desktop, lock-scree
 
 **Project stage:** Early platform bring-up  
 **Current milestone:** M1 — Non-Destructive UEFI Diagnostic Payload  
+**Internal engineering checkpoint:** M16 host-test checkpoint predecessor binding and alternate-head rejection implemented; exact-stock `fastboot boot` runtime route confirmed on CPH2413, while product M1 still requires a verified custom container, diagnostic execution evidence and independent custody<br>
 **Reference target:** OnePlus 10T 5G / `ovaltine` / SM8475
 
 This project is experimental. Do not flash or repartition a device based on incomplete bring-up work.

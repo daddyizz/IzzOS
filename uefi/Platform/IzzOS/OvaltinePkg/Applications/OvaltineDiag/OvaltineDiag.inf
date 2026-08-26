@@ -1,0 +1,22 @@
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = OvaltineDiag
+  FILE_GUID                      = 9A913D0B-4C16-4DA1-A3A7-2E1F6DA2A847
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 0.1
+  ENTRY_POINT                    = UefiMain
+
+[Sources]
+  OvaltineDiag.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  MemoryAllocationLib
+  UefiApplicationEntryPoint
+  UefiBootServicesTableLib
+  UefiLib
+
+[Protocols]
+  gEfiGraphicsOutputProtocolGuid

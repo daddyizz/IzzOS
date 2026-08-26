@@ -1,0 +1,339 @@
+name: UEFI Ovaltine Diagnostic
+
+on:
+  push:
+    branches:
+      - izzos-woa-foundation
+    paths:
+      - 'uefi/**'
+      - 'scripts/**'
+      - 'docs/M1_CURRENT_PAYLOAD.txt'
+      - 'docs/M1_STANDALONE_FIRMWARE_BRINGUP.md'
+      - 'docs/M7_STANDALONE_LAYOUT_CONTRACT.md'
+      - 'docs/M8_DEVICE_ATTENDANCE_HANDOFF.md'
+      - 'docs/M9_EXACT_DEVICE_EVIDENCE_BINDING.md'
+      - 'docs/M10_CONTENT_BOUND_STOCK_ACCEPTANCE.md'
+      - 'docs/M11_CONTENT_BOUND_ROUTE_EVIDENCE.md'
+      - 'docs/M12_SIGNED_ROUTE_ATTESTATION.md'
+      - 'docs/M13_ROUTE_ATTESTER_KEY_GOVERNANCE.md'
+      - 'docs/M14_REPOSITORY_GOVERNANCE_ROOT_ENROLLMENT.md'
+      - 'docs/M15_GOVERNANCE_ROOT_CONTINUITY.md'
+      - 'docs/M16_GOVERNANCE_CHECKPOINT_HISTORY.md'
+      - 'config/m2-route-governance-checkpoint-history-test-anchor.txt'
+      - 'config/m2-route-governance-root-enrollment.txt'
+      - 'config/m2-route-governance-root-test-public.pem'
+      - 'config/m2-route-governance-root-next-test-public.pem'
+      - 'config/m2-route-governance-recovery-custodian-1-test-public.pem'
+      - 'config/m2-route-governance-recovery-custodian-2-test-public.pem'
+      - 'config/m2-route-governance-recovery-custodian-3-test-public.pem'
+      - 'docs/CPH2413_15.0.0.1901_EX01_STOCK_HASHES.txt'
+      - '.github/workflows/uefi-ovaltine-diag.yml'
+  pull_request:
+    paths:
+      - 'uefi/**'
+      - 'scripts/**'
+      - 'docs/M1_CURRENT_PAYLOAD.txt'
+      - 'docs/M1_STANDALONE_FIRMWARE_BRINGUP.md'
+      - 'docs/M7_STANDALONE_LAYOUT_CONTRACT.md'
+      - 'docs/M8_DEVICE_ATTENDANCE_HANDOFF.md'
+      - 'docs/M9_EXACT_DEVICE_EVIDENCE_BINDING.md'
+      - 'docs/M10_CONTENT_BOUND_STOCK_ACCEPTANCE.md'
+      - 'docs/M11_CONTENT_BOUND_ROUTE_EVIDENCE.md'
+      - 'docs/M12_SIGNED_ROUTE_ATTESTATION.md'
+      - 'docs/M13_ROUTE_ATTESTER_KEY_GOVERNANCE.md'
+      - 'docs/M14_REPOSITORY_GOVERNANCE_ROOT_ENROLLMENT.md'
+      - 'docs/M15_GOVERNANCE_ROOT_CONTINUITY.md'
+      - 'docs/M16_GOVERNANCE_CHECKPOINT_HISTORY.md'
+      - 'config/m2-route-governance-checkpoint-history-test-anchor.txt'
+      - 'config/m2-route-governance-root-enrollment.txt'
+      - 'config/m2-route-governance-root-test-public.pem'
+      - 'config/m2-route-governance-root-next-test-public.pem'
+      - 'config/m2-route-governance-recovery-custodian-1-test-public.pem'
+      - 'config/m2-route-governance-recovery-custodian-2-test-public.pem'
+      - 'config/m2-route-governance-recovery-custodian-3-test-public.pem'
+      - 'docs/CPH2413_15.0.0.1901_EX01_STOCK_HASHES.txt'
+      - '.github/workflows/uefi-ovaltine-diag.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout IzzOS
+        uses: actions/checkout@v4
+
+      - name: Validate shell scripts
+        run: bash -n scripts/*.sh
+
+      - name: Test privacy-safe device attendance and capability analyzer
+        run: bash scripts/test-analyze-ovaltine-inspection.sh
+
+      - name: Test deterministic Android Platform-Tools selection
+        run: bash scripts/test-android-platform-tools-selection.sh
+
+      - name: Test host fastboot toolchain gate
+        run: bash scripts/test-check-host-fastboot-toolchain.sh
+
+      - name: Test one-command read-only device inspection collector
+        run: bash scripts/test-collect-m1-device-inspection.sh
+
+      - name: Test merged exact-device evidence
+        run: bash scripts/test-merge-m1-device-inspections.sh
+
+      - name: Test exact-build stock image request planner
+        run: bash scripts/test-plan-stock-image-request.sh
+
+      - name: Test stock acquisition handoff generator
+        run: bash scripts/test-generate-stock-acquisition-handoff.sh
+
+      - name: Test diagnostic output analyzer
+        run: bash scripts/test-analyze-ovaltine-diag.sh
+
+      - name: Test runtime payload identity verifier
+        run: bash scripts/test-runtime-payload-identity.sh
+
+      - name: Test stock boot metadata analyzer
+        run: bash scripts/test-analyze-stock-boot-metadata.sh
+
+      - name: Test exact-stock AArch64 kernel header analyzer
+        run: bash scripts/test-analyze-stock-aarch64-kernel-header.sh
+
+      - name: Test exact-stock LinuxLoader fastboot/boot string analyzer
+        run: bash scripts/test-analyze-linuxloader-fastboot-strings.sh
+
+      - name: Test exact-stock fastboot boot route evidence verifier
+        run: bash scripts/test-verify-m1-stock-fastboot-boot-route.sh
+
+      - name: Test M6 exact stock kernel-region geometry verifier
+        run: bash scripts/test-verify-m1-kernel-region-geometry.sh
+
+      - name: Test M7 standalone layout region contract
+        run: bash scripts/test-check-m7-layout-contract.sh
+
+      - name: Test M7 standalone FD capacity contract
+        run: bash scripts/test-verify-m7-fd-capacity.sh
+
+      - name: Test M7 exact selected-DTB binding
+        run: bash scripts/test-verify-m7-selected-dtb.sh
+
+      - name: Test M7 bound-DTB GIC and timer evidence
+        run: bash scripts/test-verify-m7-gic-timer-dtb.sh
+
+      - name: Test M7 exact-stock AArch64 Linux entry contract
+        run: bash scripts/test-verify-m7-aarch64-entry-contract.sh
+
+      - name: Test M7 exact Android container input binding
+        run: bash scripts/test-verify-m7-android-container-inputs.sh
+
+      - name: Test M7 exact LinuxLoader placement evidence binding
+        run: bash scripts/test-verify-m7-linuxloader-placement-evidence.sh
+
+      - name: Test M7 standalone SEC entry requirement binding
+        run: bash scripts/test-verify-m7-standalone-sec-entry-requirements.sh
+
+      - name: Test M7 Qualcomm entry observation schema gate
+        run: bash scripts/test-verify-m7-qualcomm-entry-observation.sh
+
+      - name: Test M7 AArch64 extension-register inventory schema gate
+        run: bash scripts/test-verify-m7-aarch64-extension-register-inventory.sh
+
+      - name: Test M7 AArch64 extension control-bit assessment
+        run: bash scripts/test-verify-m7-aarch64-extension-bit-assessment.sh
+
+      - name: Test M7 AArch64 cross-core register consistency gate
+        run: bash scripts/test-verify-m7-aarch64-cross-core-registers.sh
+
+      - name: Test M7 coherency-domain and secondary-CPU assertion schema gate
+        run: bash scripts/test-verify-m7-coherency-secondary-state.sh
+
+      - name: Test M7 SM8475 coherency provenance boundary gate
+        run: bash scripts/test-verify-m7-sm8475-coherency-provenance.sh
+
+      - name: Test M7 Secure EL3 handoff-state assertion schema gate
+        run: bash scripts/test-verify-m7-secure-el3-handoff-state.sh
+
+      - name: Test M7 SMCCC EL3 feature-availability route gate
+        run: bash scripts/test-verify-m7-smccc-el3-feature-availability.sh
+
+      - name: Test M7 exact pre-SEC SMCCC collector route authorization
+        run: bash scripts/test-verify-m7-pre-sec-smccc-route-authorization.sh
+
+      - name: Test M7 deterministic SMCCC route-token provisioning
+        run: bash scripts/test-generate-m7-smccc-route-token.sh
+
+      - name: Test M7 SMCCC feature-availability collector contract
+        run: bash scripts/test-m7-smccc-feature-availability-collector.sh
+
+      - name: Test M7 deterministic SMCCC transcript emitter
+        run: bash scripts/test-m7-smccc-capture-transcript-emitter.sh
+
+      - name: Test M7 bound SMCCC capture orchestrator
+        run: bash scripts/test-m7-smccc-capture-orchestrator.sh
+
+      - name: Test M7 deterministic bound SMCCC capture provisioning
+        run: bash scripts/test-generate-m7-smccc-capture-provision.sh
+
+      - name: Test M7 deterministic SMCCC capture serializer round trip
+        run: bash scripts/test-serialize-m7-smccc-feature-availability-capture.sh
+
+      - name: Test M7 standalone host-readiness audit
+        run: bash scripts/test-report-m7-standalone-readiness.sh
+
+      - name: Test M7 device-promotion evidence audit
+        run: bash scripts/test-report-m7-device-promotion-readiness.sh
+
+      - name: Test M7 SEC/PrePi wrapper execution assertion schema
+        run: bash scripts/test-verify-m7-sec-prepi-wrapper-execution.sh
+
+      - name: Test M7 final runtime-destination ownership gate
+        run: bash scripts/test-verify-m7-runtime-destination-ownership.sh
+
+      - name: Test M7 fresh one-shot execution-authorization readiness gate
+        run: bash scripts/test-verify-m7-one-shot-execution-authorization.sh
+
+      - name: Test M7 token-consumption receipt and execution-result binding gate
+        run: bash scripts/test-verify-m7-token-consumption-execution-result.sh
+
+      - name: Test M7 independent authority-attestation signature gate
+        run: bash scripts/test-verify-m7-authority-attestation.sh
+
+      - name: Test M7 key rotation, revocation and anti-rollback governance gate
+        run: bash scripts/test-verify-m7-key-rotation-governance.sh
+
+      - name: Test M7 checkpoint publication quorum and governance-root recovery policy gate
+        run: bash scripts/test-verify-m7-checkpoint-publication-root-recovery.sh
+
+      - name: Test M7 governance-root recovery event gate
+        run: bash scripts/test-verify-m7-governance-root-recovery-event.sh
+
+      - name: Test M7 recovered-checkpoint republication quorum gate
+        run: bash scripts/test-verify-m7-recovered-checkpoint-republication.sh
+
+      - name: Test M7 recovered-checkpoint external-distribution gate
+        run: bash scripts/test-verify-m7-recovered-checkpoint-external-distribution.sh
+
+      - name: Test M7 recovered-checkpoint bounded-monitoring gate
+        run: bash scripts/test-verify-m7-recovered-checkpoint-bounded-monitoring.sh
+
+      - name: Test stock image provenance gate
+        run: bash scripts/test-verify-stock-image-provenance.sh
+
+      - name: Test stock provenance generator round trip
+        run: bash scripts/test-stock-image-provenance-roundtrip.sh
+
+      - name: Test stock image set consistency
+        run: bash scripts/test-stock-image-set.sh
+
+      - name: Test exact-build content-bound stock hash lock
+        run: bash scripts/test-verify-exact-stock-hash-lock.sh
+
+      - name: Test M2 evidence bundle consistency
+        run: bash scripts/test-verify-m2-evidence-bundle.sh
+
+      - name: Test M2 recovery evidence gate
+        run: bash scripts/test-verify-m2-recovery-evidence.sh
+
+      - name: Test M2 route authorization gate
+        run: bash scripts/test-verify-m2-route-authorization.sh
+
+      - name: Test M2 content-bound temporary-route evidence
+        run: bash scripts/test-verify-m2-route-evidence.sh
+
+      - name: Test M2 signed temporary-route attestation
+        run: bash scripts/test-verify-m2-route-attestation.sh
+
+      - name: Test M2 route-attester key governance
+        run: bash scripts/test-verify-m2-route-attester-governance.sh
+
+      - name: Test M2 repository governance-root enrollment contract
+        run: bash scripts/test-verify-m2-route-governance-root-enrollment.sh
+
+      - name: Test M2 governance-root continuity and anti-rollback
+        run: bash scripts/test-verify-m2-route-governance-root-continuity.sh
+
+      - name: Test M2 governance checkpoint-history and fork detection
+        run: bash scripts/test-verify-m2-route-governance-checkpoint-history.sh
+
+      - name: Test M2 evidence tamper detection
+        run: bash scripts/test-evidence-bundle-index.sh
+
+      - name: Test M2 evidence freshness
+        run: bash scripts/test-verify-evidence-freshness.sh
+
+      - name: Test M2 readiness report
+        run: bash scripts/test-report-m2-readiness.sh
+
+      - name: Test gated M1 device-test package assembly
+        run: bash scripts/test-prepare-m1-device-test-package.sh
+
+      - name: Test standalone firmware readiness gate
+        run: bash scripts/test-check-m1-standalone-firmware-readiness.sh
+
+      - name: Test SM8475 reserved-memory gap model
+        run: bash scripts/test-model-sm8475-reserved-memory-gaps.sh
+
+      - name: Report standalone firmware readiness
+        run: bash scripts/check-m1-standalone-firmware-readiness.sh
+
+      - name: Enforce M1 read-only safety gate
+        run: bash scripts/check-m1-safety.sh
+
+      - name: Install AArch64 EDK2 dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            acpica-tools \
+            gcc-aarch64-linux-gnu \
+            git \
+            make \
+            nasm \
+            python3 \
+            uuid-dev
+
+      - name: Build OvaltineDiag
+        run: bash scripts/build-ovaltine-diag.sh
+
+      - name: Verify OvaltineDiag artifact
+        run: bash scripts/verify-ovaltine-diag.sh
+
+      - name: Verify current M1 payload identity lock
+        run: |
+          cat > .work/current-payload-runtime.txt <<'EOF'
+          [IDENTITY] payload-id=M1-DIAG-R3 schema=1 hash-source=external-manifest
+          EOF
+          bash scripts/verify-runtime-payload-identity.sh \
+            .work/current-payload-runtime.txt \
+            docs/M1_CURRENT_PAYLOAD.txt \
+            out/ovaltine-diag/OvaltineDiag.efi
+
+      - name: Verify route-neutral M2 staging
+        run: |
+          rm -rf .work/m2-staging-test
+          bash scripts/prepare-m2-staging.sh \
+            out/ovaltine-diag/OvaltineDiag.efi \
+            .work/m2-staging-test \
+            CI-UNVALIDATED
+          MANIFEST=.work/m2-staging-test/CI-UNVALIDATED/manifest.txt
+          DERIVED=.work/m2-staging-test/CI-UNVALIDATED/derived
+          RECOVERY=.work/m2-staging-test/CI-UNVALIDATED/recovery-evidence.txt
+          ROUTE_EVIDENCE=.work/m2-staging-test/CI-UNVALIDATED/route-evidence.txt
+          grep -q '^Selected launch route: NONE$' "$MANIFEST"
+          grep -q '^Route decision: INSUFFICIENT_DEVICE_DATA$' "$MANIFEST"
+          grep -q '^Persistent writes: FORBIDDEN$' "$MANIFEST"
+          grep -q '^Slot changes: FORBIDDEN$' "$MANIFEST"
+          test -z "$(find "$DERIVED" -mindepth 1 -print -quit)"
+          printf 'Device model/product: UNVALIDATED\n' > "$RECOVERY"
+          printf 'Schema: UNVALIDATED\n' > "$ROUTE_EVIDENCE"
+          if bash scripts/verify-m2-route-authorization.sh "$MANIFEST" "$RECOVERY" "$ROUTE_EVIDENCE" >/dev/null 2>&1; then
+            echo 'ERROR: route-neutral manifest must not pass route authorization' >&2
+            exit 1
+          fi
+
+      - name: Upload diagnostic EFI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OvaltineDiag-AARCH64
+          path: out/ovaltine-diag/
+          if-no-files-found: error

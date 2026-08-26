@@ -1,0 +1,16 @@
+IzzOS M1 current diagnostic payload
+Payload ID: M1-DIAG-R3
+Identity schema: 1
+Source branch head: 3b1b5dbe13638fb0866a8025425f815d95c0aa09
+PR test merge revision: 548184e2471cf44961a20d451d75ba46894277c3
+GitHub Actions run: 32599170122
+Artifact ID: 9482409445
+Artifact archive digest: sha256:5d7bbb60fbaf2714f76a2c4879b6aad241f738c1a0c27b30fab82f384d276ee3
+EFI file: OvaltineDiag.efi
+EFI size bytes: 24576
+EFI SHA256: 303fca430094e2265dc135bfeaab943161bf75aa93dea2ae4620bd6a18658e71
+EFI classification: PE32+ executable for EFI (application), ARM64, 3 sections
+Target: OnePlus 10T 5G / ovaltine / SM8475
+Status: CURRENT_M1_DEVICE_TEST_CANDIDATE
+
+This file pins the exact host-verified payload selected for the next physical M1 diagnostic execution. It does not authorize a launch route. A future payload revision must replace the CURRENT status only after its own CI build, artifact verification, and independent checksum review complete successfully.
