@@ -1,0 +1,8 @@
+prebuilt/kernel
+prebuilt/dtbo.img
+prebuilt/dtbs/*.dtb
+!prebuilt/dtbs/.gitkeep
+stock/
+out/
+*.img
+*.zip

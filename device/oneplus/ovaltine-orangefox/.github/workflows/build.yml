@@ -1,0 +1,64 @@
+name: Build OrangeFox ovaltine
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout device tree
+        uses: actions/checkout@v4
+
+      - name: Check stock prebuilts
+        run: |
+          test -s prebuilt/kernel
+          test -s prebuilt/dtbs/stock.dtb
+          test -s prebuilt/dtbo.img
+          ./scripts/validate-tree.sh
+
+      - name: Free runner disk
+        run: |
+          sudo rm -rf /usr/local/lib/android /opt/ghc /usr/share/dotnet /opt/hostedtoolcache/CodeQL
+          sudo apt-get clean
+          df -h /
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib \
+            gcc-multilib git git-lfs gnupg gperf imagemagick lib32readline-dev \
+            lib32z1-dev libelf-dev liblz4-tool libncurses5-dev libsdl1.2-dev \
+            libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool \
+            squashfs-tools xsltproc zip zlib1g-dev
+
+      - name: Install repo
+        run: |
+          mkdir -p "$HOME/bin"
+          curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo -o "$HOME/bin/repo"
+          chmod +x "$HOME/bin/repo"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: Sync OrangeFox 14.1
+        run: |
+          git clone --depth=1 https://gitlab.com/OrangeFox/sync.git "$RUNNER_TEMP/OrangeFox_sync"
+          "$RUNNER_TEMP/OrangeFox_sync/orangefox_sync.sh" --branch 14.1 --path "$RUNNER_TEMP/OrangeFox_14.1"
+
+      - name: Build recovery image
+        run: ./scripts/build-orangefox.sh "$RUNNER_TEMP/OrangeFox_14.1"
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p artifacts
+          find "$RUNNER_TEMP/OrangeFox_14.1/out/target/product/ovaltine" -maxdepth 1 -type f \
+            \( -name 'recovery.img' -o -name 'OrangeFox-*' \) -exec cp -v {} artifacts/ \;
+          sha256sum artifacts/* > artifacts/SHA256SUMS
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: OrangeFox-ovaltine-alpha
+          path: artifacts/
+          if-no-files-found: error
