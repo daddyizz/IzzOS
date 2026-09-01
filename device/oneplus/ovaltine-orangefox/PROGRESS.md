@@ -15,7 +15,7 @@ Last updated: 2026-09-01 UTC
 - GitHub repository: `daddyizz/IzzOS`
 - Branch: `orangefox-ovaltine-bringup`
 - Device-tree path: `device/oneplus/ovaltine-orangefox`
-- Previous remote checkpoint commit: `90910ae0fa215575c4644a728a9bdeedfe667460`
+- Block 2 implementation commit: `607f2b94434562626700882938d3ebcca5451d12`
 - Stock-source archive: `OrangeFox-ovaltine-source-39ac2c4.zip`
 - Stock prebuilts are intentionally excluded from Git.
 
