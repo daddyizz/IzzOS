@@ -15,7 +15,7 @@ Last updated: 2026-09-01 UTC
 - GitHub repository: `daddyizz/IzzOS`
 - Branch: `orangefox-ovaltine-bringup`
 - Device-tree path: `device/oneplus/ovaltine-orangefox`
-- Last remote checkpoint: `2fde1d699f55fc4e95523ec5bc5ba491aca10b9c`
+- Progress checkpoint commit: `c3485d7509fe8fbee836089dcee3ac20a9bb064f`
 - Stock-source archive: `OrangeFox-ovaltine-source-39ac2c4.zip`
 - Stock prebuilts are intentionally excluded from Git.
 
@@ -38,12 +38,18 @@ Last updated: 2026-09-01 UTC
   OrangeFox build/update-engine patches were applied in the disposable build
   workspace.
 - Soong bootstrap compiled fully and reached Android.bp analysis.
+- Safety audit removed the dangerous `oplusreserve2 -> /cache` mapping,
+  restored `/persist`, completed the A/B partition list, and added validation
+  assertions for these invariants.
 
 ## Last build result
 
 The disposable 18 GiB source workspace was automatically cleared between
 sessions. Before cleanup, Soong Android.bp analysis was killed by the 14 GiB
 cgroup memory limit. This was not a device-tree compile error.
+
+The next local build must set `GOMAXPROCS=2`, `GOMEMLIMIT=10GiB` and compile
+only `m -j1 recoveryimage`. The build script now supplies these safe defaults.
 
 Resolved before the memory stop:
 
@@ -75,3 +81,11 @@ At the end of every block, update this file and push the branch. Never repeat a
 completed sync/audit unless its recorded input changed. `recovery.img` must be
 taken from `out/target/product/ovaltine/recovery.img`; it is not contained in a
 device-tree/source ZIP.
+
+## CI blocker
+
+GitHub discovers workflows only under the repository-root `.github/workflows`
+directory. The workflow stored inside this device-tree folder is a template,
+not an active workflow. A root workflow must download the three ignored stock
+prebuilts from private storage, verify their pinned hashes, then call this
+tree's scripts. See `docs/CI.md`.

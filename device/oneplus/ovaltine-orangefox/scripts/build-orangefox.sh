@@ -36,12 +36,20 @@ export ALLOW_MISSING_DEPENDENCIES=true
 export FOX_BUILD_DEVICE=ovaltine
 export FOX_BUILD_TYPE=Alpha
 export FOX_USE_TWRP_RECOVERY_IMAGE_BUILDER=1
+export ALLOW_NINJA_ENV=true
 export LC_ALL=C
+
+# Keep Soong below a 14 GiB container/runner memory limit. The Go analysis
+# phase, rather than Ninja compilation, was the previous OOM point.
+: "${GOMAXPROCS:=2}"
+: "${GOMEMLIMIT:=10GiB}"
+: "${SOONG_UI_NINJA_ARGS:=-j1 -l1}"
+export GOMAXPROCS GOMEMLIMIT SOONG_UI_NINJA_ARGS
 
 cd "$FOX_SOURCE"
 source build/envsetup.sh
 lunch twrp_ovaltine-ap2a-eng
-mka adbd recoveryimage
+m -j1 recoveryimage
 
 OUT_PATH="${OUT_DIR:-$FOX_SOURCE/out}/target/product/ovaltine"
 echo "Build output: $OUT_PATH"
