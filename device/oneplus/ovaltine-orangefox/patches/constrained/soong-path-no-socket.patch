@@ -1,0 +1,9 @@
+diff --git a/ui/build/path.go b/ui/build/path.go
+index 51ebff1..1a71d7d 100644
+--- a/ui/build/path.go
++++ b/ui/build/path.go
+@@ -166 +166,3 @@ func SetupPath(ctx Context, config Config) {
+-		ctx.Fatalln("Failed to listen for path logs:", err)
++		ctx.Println("Path log listener unavailable; using lite PATH setup:", err)
++		SetupLitePath(ctx, config, "")
++		return

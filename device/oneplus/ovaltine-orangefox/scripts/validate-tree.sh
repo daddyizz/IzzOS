@@ -30,6 +30,31 @@ require_text "$TREE_DIR/recovery/root/system/etc/recovery.fstab" 'oplusreserve2 
 require_text "$TREE_DIR/recovery/root/system/etc/recovery.fstab" 'by-name/persist /mnt/vendor/persist'
 require_text "$TREE_DIR/recovery/root/init.recovery.qcom.rc" 'import /init.recovery.qcom_decrypt.rc'
 require_text "$TREE_DIR/scripts/make-boot-test.sh" 'Do not flash it'
+require_text "$TREE_DIR/scripts/bootstrap-constrained.sh" 'clang-r510928'
+require_text "$TREE_DIR/scripts/bootstrap-constrained.sh" 'DROP_REPO_CACHE:-0'
+require_text "$TREE_DIR/scripts/bootstrap-constrained.sh" '/27/public/api/android.txt'
+require_text "$TREE_DIR/scripts/bootstrap-constrained.sh" '/30/public/android.jar'
+require_text "$TREE_DIR/scripts/bootstrap-constrained.sh" '!/tools/\*/'
+require_text "$TREE_DIR/scripts/bootstrap-constrained.sh" 'Refusing non-empty directory'
+require_text "$TREE_DIR/patches/constrained/soong-path-no-socket.patch" 'SetupLitePath'
+require_text "$TREE_DIR/patches/constrained/host-prebuilts.patch" 'build-tools-lld-windows'
+
+for executable in \
+  "$TREE_DIR/scripts/bootstrap-constrained.sh" \
+  "$TREE_DIR/scripts/build-orangefox.sh" \
+  "$TREE_DIR/scripts/validate-tree.sh"; do
+  if [ ! -x "$executable" ]; then
+    echo "FAIL: script is not executable: $executable" >&2
+    fail=1
+  fi
+done
+
+stale_clang='clang-r487747''c'
+if grep -RIn "$stale_clang" \
+  "$TREE_DIR/scripts" "$TREE_DIR/manifests" "$TREE_DIR/patches"; then
+  echo "FAIL: stale pre-QPR3 Clang revision found" >&2
+  fail=1
+fi
 
 if grep -Eq 'oplusreserve2[[:space:]]+/cache' "$TREE_DIR/recovery/root/system/etc/recovery.fstab"; then
   echo "FAIL: oplusreserve2 must never be exposed as wipeable /cache" >&2

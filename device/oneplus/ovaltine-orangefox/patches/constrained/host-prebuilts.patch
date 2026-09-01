@@ -1,0 +1,82 @@
+diff --git a/prebuilts/misc/Android.bp b/prebuilts/misc/Android.bp
+index aa0ad07..8ed5eea 100644
+--- a/prebuilts/misc/Android.bp
++++ b/prebuilts/misc/Android.bp
+@@ -31,8 +31,6 @@ license {
+     ],
+     license_text: [
+         "common/jacoco/lib/NOTICE.txt",
+-        "darwin-x86/yasm/COPYING",
+-        "darwin-x86_64/sdl2/include/SDL2/NOTICE",
+         "linux-x86/yasm/COPYING",
+     ],
+ }
+diff --git a/prebuilts/sdk/Android.bp b/prebuilts/sdk/Android.bp
+index 9d130c3..0d879f9 100644
+--- a/prebuilts/sdk/Android.bp
++++ b/prebuilts/sdk/Android.bp
+@@ -93,44 +93,10 @@ filegroup {
+ prebuilt_apis {
+     name: "sdk",
+     api_dirs: [
+-        "1",
+-        "2",
+-        "3",
+-        "4",
+-        "5",
+-        "6",
+-        "7",
+-        "8",
+-        "9",
+-        "10",
+-        "11",
+-        "12",
+-        "13",
+-        "14",
+-        "15",
+-        "16",
+-        "17",
+-        "18",
+-        "19",
+-        "20",
+-        "21",
+-        "22",
+-        "23",
+-        "24",
+-        "25",
+-        "26",
+-        "27",
+-        "28",
+-        "29",
+-        "30",
+-        "31",
+-        "32",
+-        "33",
+         "34",
+         "current",
+     ],
+     extensions_dir: "extensions",
+-    next_api_dir: "35",
+     imports_sdk_version: "none",
+     imports_compile_dex: true,
+ }
+diff --git a/prebuilts/sdk/tools/Android.bp b/prebuilts/sdk/tools/Android.bp
+index 3c08a5f..15a3def 100644
+--- a/prebuilts/sdk/tools/Android.bp
++++ b/prebuilts/sdk/tools/Android.bp
+@@ -124,6 +124,7 @@ genrule {
+
+ genrule {
+     name: "build-tools-lld-windows",
++    enabled: false,
+     visibility: ["//development/build"],
+     tools: ["soong_zip"],
+     cmd: "mkdir -p $(genDir)/out/{lld-bin,lib64} && " +
+@@ -145,6 +146,7 @@ genrule {
+
+ genrule {
+     name: "build-tools-lld-darwin",
++    enabled: false,
+     visibility: ["//development/build"],
+     tools: ["soong_zip"],
+     cmd: "mkdir -p $(genDir)/out/{lld-bin,lib64} && " +

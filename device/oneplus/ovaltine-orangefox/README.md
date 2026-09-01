@@ -54,7 +54,20 @@ Then run `./scripts/validate-tree.sh`.
 
 ## Sync and build
 
-Use the official OrangeFox sync repository:
+For a build host limited to roughly 15 GiB RAM and 32 GiB disk, use the
+constrained bootstrap. It keeps the QPR3 pairing, installs the official
+OrangeFox components, checks out Linux-only Clang/SDK prebuilts sparsely and
+records every local source patch:
+
+```bash
+git clone --depth=1 --branch fox_14.1 \
+  https://gitlab.com/OrangeFox/sync.git /path/to/OrangeFox_sync
+./scripts/bootstrap-constrained.sh \
+  /path/to/OrangeFox_14.1 /path/to/OrangeFox_sync
+./scripts/build-orangefox.sh /path/to/OrangeFox_14.1
+```
+
+On a normal large Linux build host, the upstream sync remains available:
 
 ```bash
 git clone https://gitlab.com/OrangeFox/sync.git OrangeFox_sync

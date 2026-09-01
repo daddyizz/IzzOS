@@ -15,7 +15,7 @@ Last updated: 2026-09-01 UTC
 - GitHub repository: `daddyizz/IzzOS`
 - Branch: `orangefox-ovaltine-bringup`
 - Device-tree path: `device/oneplus/ovaltine-orangefox`
-- Progress checkpoint commit: `c3485d7509fe8fbee836089dcee3ac20a9bb064f`
+- Previous remote checkpoint commit: `90910ae0fa215575c4644a728a9bdeedfe667460`
 - Stock-source archive: `OrangeFox-ovaltine-source-39ac2c4.zip`
 - Stock prebuilts are intentionally excluded from Git.
 
@@ -41,6 +41,15 @@ Last updated: 2026-09-01 UTC
 - Safety audit removed the dangerous `oplusreserve2 -> /cache` mapping,
   restored `/persist`, completed the A/B partition list, and added validation
   assertions for these invariants.
+- Block 2 produced `scripts/bootstrap-constrained.sh`, a reproducible minimal
+  source bootstrap for the 14 GiB cgroup. It installs the pinned QPR3 local
+  manifest before sync, overlays the three official OrangeFox repositories,
+  sparsely checks out Linux-only Clang `r510928`, SDK 34 and misc prebuilts,
+  while retaining uncertain dependency graphs until Soong proves they are safe
+  to remove.
+- Both constrained patches were generated against real
+  `android-14.0.0_r67`/TeamWin checkouts and passed apply plus reverse-apply
+  smoke tests. Tree validation and shell syntax validation pass.
 
 ## Last build result
 
@@ -64,9 +73,9 @@ Resolved before the memory stop:
 
 1. **Checkpoint inputs** — restore stock archive, validate checksums, sync this
    progress record to Git.
-2. **Minimum build graph** — reduce source/module scan enough to fit the 14 GiB
-   memory limit; record every source override in the manifest/scripts.
-3. **Build host** — use a reproducible host or CI path that can securely obtain
+2. **Minimum build graph — completed** — constrained bootstrap, sparse host
+   prebuilts and recorded source patches are ready.
+3. **Build host — next** — use a reproducible host or CI path that can securely obtain
    the ignored stock prebuilts.
 4. **Compile** — build `adbd recoveryimage`; commit fixes after each stable
    milestone.
