@@ -10,6 +10,11 @@ Unofficial, early bring-up tree for:
 - Firmware baseline: OxygenOS `15.0.0.1901(EX01)`
 - OrangeFox base: official experimental `fox_14.1`
 
+The current build pairing uses TeamWin/OrangeFox `android-14.1` components
+with AOSP Android 14 QPR3 (`AP2A.240905.003`) release configuration. Use the
+`twrp_ovaltine-ap2a-eng` lunch target; mixing an older release configuration
+with the QPR3 build system causes Soong bootstrap incompatibilities.
+
 ## Status
 
 This is an **Alpha bring-up tree**, not a release image. It has not yet booted
@@ -60,15 +65,6 @@ git clone https://gitlab.com/OrangeFox/sync.git OrangeFox_sync
 The official documentation warns that the sync can consume 40-80 GB. The
 included GitHub Actions workflow removes unused runner SDKs before syncing, but
 a large self-hosted runner is more reliable.
-
-For the Android 14 QPR3 build environment, use:
-
-```bash
-lunch twrp_ovaltine-ap2a-eng
-```
-
-TeamWin's `android-14.1` build branch must be paired with the matching QPR3
-release config, Bazel, Blueprint, Soong, Go and Starlark sources.
 
 ## Safety gate
 
