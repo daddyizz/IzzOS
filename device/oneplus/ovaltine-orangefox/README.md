@@ -62,6 +62,11 @@ git clone https://gitlab.com/OrangeFox/sync.git OrangeFox_sync
 ./scripts/build-orangefox.sh /path/to/OrangeFox_14.1
 ```
 
+For the Android 14 QPR3 pairing used by this bring-up, copy
+`manifests/ovaltine-qpr3.xml` into `.repo/local_manifests/` before syncing.
+The large Clang, SDK and misc prebuilts intentionally excluded by that manifest
+can then be checked out sparsely for a constrained build host.
+
 The official documentation warns that the sync can consume 40-80 GB. The
 included GitHub Actions workflow removes unused runner SDKs before syncing, but
 a large self-hosted runner is more reliable.
