@@ -38,10 +38,17 @@ require_text "$TREE_DIR/scripts/bootstrap-constrained.sh" '!/tools/\*/'
 require_text "$TREE_DIR/scripts/bootstrap-constrained.sh" 'Refusing non-empty directory'
 require_text "$TREE_DIR/patches/constrained/soong-path-no-socket.patch" 'SetupLitePath'
 require_text "$TREE_DIR/patches/constrained/host-prebuilts.patch" 'build-tools-lld-windows'
+require_text "$TREE_DIR/prebuilt/BUILD_SHA256SUMS" '^f5137d9b.*  kernel$'
+require_text "$TREE_DIR/prebuilt/BUILD_SHA256SUMS" '^2f1efc63.*  dtbo.img$'
+require_text "$TREE_DIR/prebuilt/BUILD_SHA256SUMS" '^0fa5416a.*  dtbs/stock.dtb$'
 
 for executable in \
   "$TREE_DIR/scripts/bootstrap-constrained.sh" \
   "$TREE_DIR/scripts/build-orangefox.sh" \
+  "$TREE_DIR/scripts/check-build-host.sh" \
+  "$TREE_DIR/scripts/compat-repo-v214.py" \
+  "$TREE_DIR/scripts/stage-stock-prebuilts.sh" \
+  "$TREE_DIR/scripts/verify-stock-prebuilts.sh" \
   "$TREE_DIR/scripts/validate-tree.sh"; do
   if [ ! -x "$executable" ]; then
     echo "FAIL: script is not executable: $executable" >&2

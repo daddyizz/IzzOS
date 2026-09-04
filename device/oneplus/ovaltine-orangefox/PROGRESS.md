@@ -98,3 +98,11 @@ directory. The workflow stored inside this device-tree folder is a template,
 not an active workflow. A root workflow must download the three ignored stock
 prebuilts from private storage, verify their pinned hashes, then call this
 tree's scripts. See `docs/CI.md`.
+
+## Block 3 handoff (2026-09-04)
+
+The public repository now contains the root validation workflow and secure
+stock-prebuilt staging utilities. Stock-derived binaries remain ignored and
+are accepted only after size, regular-file, path-containment, and SHA-256
+checks. Compilation must run from the private self-hosted workflow documented
+in `docs/CI.md`; the old nested build workflow is not an active public CI job.
