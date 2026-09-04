@@ -1,0 +1,37 @@
+name: Validate OrangeFox ovaltine tree
+
+on:
+  push:
+    branches: [orangefox-ovaltine-bringup]
+    paths:
+      - device/oneplus/ovaltine-orangefox/**
+      - .github/workflows/validate-orangefox-ovaltine.yml
+  pull_request:
+    paths:
+      - device/oneplus/ovaltine-orangefox/**
+      - .github/workflows/validate-orangefox-ovaltine.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Validate recovery tree
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          tree="$GITHUB_WORKSPACE/device/oneplus/ovaltine-orangefox"
+          bash -n "$tree"/scripts/*.sh
+          "$tree/scripts/validate-tree.sh"
+          for binary in prebuilt/kernel prebuilt/dtbo.img prebuilt/dtbs/stock.dtb; do
+            git check-ignore -q "device/oneplus/ovaltine-orangefox/$binary"
+          done
