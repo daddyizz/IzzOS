@@ -1,0 +1,84 @@
+name: Build OrangeFox ovaltine (self-hosted)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # Register this label only on the private Linux builder that has at least
+    # 24 GiB RAM and 64 GiB free disk. Never attach it to a public runner.
+    runs-on: [self-hosted, linux, x64, orangefox-builder]
+    timeout-minutes: 720
+    env:
+      ORANGEFOX_STOCK_PREBUILTS_DIR: ${{ vars.ORANGEFOX_STOCK_PREBUILTS_DIR }}
+      GOMAXPROCS: "2"
+      GOMEMLIMIT: 10GiB
+      SOONG_UI_NINJA_ARGS: "-j1 -l1"
+      ALLOW_MISSING_DEPENDENCIES: "true"
+      ALLOW_NINJA_ENV: "true"
+      FOX_BUILD_DEVICE: ovaltine
+      FOX_BUILD_TYPE: Alpha
+      FOX_USE_TWRP_RECOVERY_IMAGE_BUILDER: "1"
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Verify private host and stock prebuilts
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test -n "$ORANGEFOX_STOCK_PREBUILTS_DIR"
+          test -d "$ORANGEFOX_STOCK_PREBUILTS_DIR"
+          mem_bytes=$(( $(awk '/MemTotal:/ {print $2}' /proc/meminfo) * 1024 ))
+          disk_bytes=$(df --output=avail -B1 "$GITHUB_WORKSPACE" | tail -1 | tr -d ' ')
+          test "$mem_bytes" -ge $((24 * 1024 * 1024 * 1024))
+          test "$disk_bytes" -ge $((64 * 1024 * 1024 * 1024))
+          tree="$GITHUB_WORKSPACE/device/oneplus/ovaltine-orangefox"
+          "$tree/scripts/stage-stock-prebuilts.sh" "$ORANGEFOX_STOCK_PREBUILTS_DIR"
+          "$tree/scripts/validate-tree.sh"
+
+      - name: Bootstrap constrained OrangeFox source
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          tree="$GITHUB_WORKSPACE/device/oneplus/ovaltine-orangefox"
+          source_root="$GITHUB_WORKSPACE/OrangeFox_14.1"
+          DROP_MEDIAPROVIDER=1 "$tree/scripts/bootstrap-constrained.sh" "$source_root"
+
+      - name: Build recovery image
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          source_root="$GITHUB_WORKSPACE/OrangeFox_14.1"
+          cd "$source_root"
+          set +u
+          source build/envsetup.sh
+          lunch twrp_ovaltine-ap2a-eng
+          find packages/providers/MediaProvider -mindepth 1 -depth -delete
+          mkdir -p packages/providers/MediaProvider
+          set -u
+          m -j1 recoveryimage
+
+      - name: Verify and collect image
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          tree="$GITHUB_WORKSPACE/device/oneplus/ovaltine-orangefox"
+          image="$GITHUB_WORKSPACE/OrangeFox_14.1/out/target/product/ovaltine/recovery.img"
+          "$tree/scripts/verify-recovery-image.sh" "$image" "$GITHUB_WORKSPACE/OrangeFox_14.1"
+          mkdir -p "$GITHUB_WORKSPACE/artifacts"
+          cp "$image" "$GITHUB_WORKSPACE/artifacts/recovery.img"
+          sha256sum "$GITHUB_WORKSPACE/artifacts/recovery.img" > "$GITHUB_WORKSPACE/artifacts/SHA256SUMS"
+
+      - name: Upload recovery artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OrangeFox-ovaltine-alpha
+          path: artifacts/
+          if-no-files-found: error
