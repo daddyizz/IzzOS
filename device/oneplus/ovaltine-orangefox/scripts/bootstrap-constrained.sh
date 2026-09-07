@@ -10,6 +10,8 @@ Environment overrides:
   SYNC_JOBS=4               repo sync workers
   DROP_REPO_CACHE=0         delete .repo only when explicitly requested
   DROP_CLONE_METADATA=0     delete sparse-clone .git only when requested
+  REPO_NO_VERIFY=0          set to 1 only where gpg-agent cannot run
+  REPO_REV=                 optional repo implementation revision
 EOF
   exit 2
 }
@@ -24,6 +26,8 @@ REPO_BIN="${REPO_BIN:-$(command -v repo || true)}"
 SYNC_JOBS="${SYNC_JOBS:-4}"
 DROP_REPO_CACHE="${DROP_REPO_CACHE:-0}"
 DROP_CLONE_METADATA="${DROP_CLONE_METADATA:-0}"
+REPO_NO_VERIFY="${REPO_NO_VERIFY:-0}"
+REPO_REV="${REPO_REV:-}"
 
 case "$FOX_SOURCE" in
   /*) ;;
@@ -108,9 +112,21 @@ apply_patch_once() {
 
 echo "[1/8] Initialising pinned TWRP/OrangeFox 14.1 source"
 cd "$FOX_SOURCE"
-"$REPO_BIN" init --depth=1 \
+repo_init_args=(init --depth=1)
+if [ "$REPO_NO_VERIFY" = "1" ]; then
+  repo_init_args+=(--no-repo-verify)
+fi
+if [ -n "$REPO_REV" ]; then
+  repo_init_args+=(--repo-rev="$REPO_REV")
+fi
+"$REPO_BIN" "${repo_init_args[@]}" \
   -u https://github.com/nebrassy/platform_manifest_twrp_aosp.git \
-  -b twrp-14
+  -b twrp-14 \
+  -m default.xml
+if [ "$REPO_REV" = "v2.14" ]; then
+  python3 "$TREE_DIR/scripts/compat-repo-v214.py" \
+    "$FOX_SOURCE/.repo/manifests"
+fi
 mkdir -p .repo/local_manifests
 cp "$TREE_DIR/manifests/ovaltine-qpr3.xml" \
   .repo/local_manifests/ovaltine-qpr3.xml
@@ -192,6 +208,9 @@ apply_patch_once "$FOX_SOURCE/build/soong" 1 \
 # after that proof has been recorded.
 if [ "${DROP_MEDIAPROVIDER:-0}" = "1" ]; then
   safe_delete "$FOX_SOURCE/packages/providers/MediaProvider"
+  # Keep an empty sentinel: OrangeFox roomservice restores this project when
+  # the directory is absent, which reintroduces the unreleased PDF API graph.
+  mkdir -p "$FOX_SOURCE/packages/providers/MediaProvider"
 fi
 
 echo "[7/8] Installing the verified ovaltine device tree"

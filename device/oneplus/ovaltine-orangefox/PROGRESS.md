@@ -53,6 +53,27 @@ Last updated: 2026-09-01 UTC
 
 ## Last build result
 
+### Block 4 constrained compile attempt (2026-09-07)
+
+The complete QPR3/OrangeFox graph was exercised in the restored source tree.
+Soong bootstrap and legacy Make parsing passed, and Ninja entered the real
+recovery build (`22,094` actions). The host then ran out of resources: free
+disk fell below 1 GiB during host/libc++ output, and a later graph regeneration
+was killed by the 15.6 GiB cgroup memory limit. No `recovery.img` was produced.
+
+The build-specific fixes are now part of the reproducible flow:
+
+1. apply `patches/constrained/soong-path-no-socket.patch`;
+2. set `DROP_MEDIAPROVIDER=1` and retain an empty MediaProvider sentinel after
+   roomservice/lunch;
+3. use a host with at least 32 GiB free disk and 24 GiB RAM (16 GiB is the
+   documented minimum, but this graph was killed at 15.6 GiB);
+4. run `GOMEMLIMIT=10GiB GOMAXPROCS=2 m -j1 recoveryimage`.
+
+The successful boundary is the generated Ninja graph plus legacy Make rules;
+the next attempt should resume from that checkpoint on a larger runner rather
+than resyncing source.
+
 The disposable 18 GiB source workspace was automatically cleared between
 sessions. Before cleanup, Soong Android.bp analysis was killed by the 14 GiB
 cgroup memory limit. This was not a device-tree compile error.

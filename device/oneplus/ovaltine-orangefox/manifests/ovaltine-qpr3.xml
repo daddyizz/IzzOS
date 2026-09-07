@@ -3,6 +3,7 @@
     <!-- OrangeFox recovery core is overlaid from the official fox_14.1 tree. -->
     <remove-project name="android_bootable_recovery" />
     <remove-project name="android_cts" />
+    <remove-project name="android_external_bash" />
 
     <!-- Host-only or ABI payloads omitted to keep the recovery build under 32 GiB. -->
     <remove-project name="platform/prebuilts/abi-dumps/ndk" />
